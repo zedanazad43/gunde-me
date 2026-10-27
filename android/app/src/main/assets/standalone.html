@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="ku" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gundé me — Lîstika Zimanê Kurdî ji bo Zarokan</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Fredoka', cursive, sans-serif; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Nunito', sans-serif; }
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.5)); }
+      50% { transform: scale(1.03); filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.9)); }
+    }
+    .animate-pulse-glow { animation: pulseGlow 2s infinite ease-in-out; }
+    @keyframes bounceSoft {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .animate-bounce-soft { animation: bounceSoft 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-sky-400 via-sky-200 to-amber-100 min-h-screen text-slate-900 select-none antialiased">
+  <div id="root"></div>
+
+  <script>
+    const { useState, useEffect, useRef, createElement: h } = React;
+
+    // --- PROCEDURAL ACOUSTIC SYNTHESIZER ---
+    class SoundEngine {
+      constructor() { this.ctx = null; }
+      getCtx() {
+        if (!this.ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) this.ctx = new AC();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+        return this.ctx;
+      }
+      playTone(freq, type, duration, delay = 0) {
+        try {
+          const ctx = this.getCtx();
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+          gain.gain.setValueAtTime(0.2, ctx.currentTime + delay);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + delay);
+          osc.stop(ctx.currentTime + delay + duration);
+        } catch(e) {}
+      }
+      playTick() { this.playTone(650 + Math.random() * 200, 'triangle', 0.05); }
+      playCoin() { this.playTone(987, 'sine', 0.1); this.playTone(1318, 'sine', 0.25, 0.08); }
+      playFanfare() { [523, 659, 784, 1046].forEach((f, i) => this.playTone(f, 'sine', 0.25, i * 0.1)); }
+      playSuccess() { this.playTone(659, 'triangle', 0.15); this.playTone(880, 'triangle', 0.35, 0.12); }
+      playError() { this.playTone(220, 'sawtooth', 0.2); this.playTone(196, 'sawtooth', 0.3, 0.15); }
+
+      // Animal calls
+      playLion() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(110, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 1.1);
+        f.type = 'bandpass'; f.frequency.setValueAtTime(300, ctx.currentTime); f.Q.setValueAtTime(4.0, ctx.currentTime);
+        g.gain.setValueAtTime(0.01, ctx.currentTime); g.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.15);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.1);
+        o.connect(f); f.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime + 1.15);
+      }
+      playHorse() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        const o = ctx.createOscillator(), v = ctx.createOscillator(), vg = ctx.createGain(), g = ctx.createGain();
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(700, ctx.currentTime); o.frequency.linearRampToValueAtTime(1250, ctx.currentTime + 0.25);
+        o.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.9);
+        v.frequency.setValueAtTime(18, ctx.currentTime); vg.gain.setValueAtTime(90, ctx.currentTime); v.connect(o.frequency);
+        g.gain.setValueAtTime(0.01, ctx.currentTime); g.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.15);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.95);
+        o.connect(g); g.connect(ctx.destination);
+        v.start(ctx.currentTime); o.start(ctx.currentTime);
+        v.stop(ctx.currentTime + 1.0); o.stop(ctx.currentTime + 1.0);
+      }
+      playCat() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(520, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(840, ctx.currentTime + 0.2);
+        o.frequency.exponentialRampToValueAtTime(420, ctx.currentTime + 0.7);
+        f.type = 'lowpass'; f.frequency.setValueAtTime(1400, ctx.currentTime);
+        f.frequency.linearRampToValueAtTime(2200, ctx.currentTime + 0.25);
+        f.frequency.linearRampToValueAtTime(900, ctx.currentTime + 0.7);
+        g.gain.setValueAtTime(0.01, ctx.currentTime); g.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 0.15);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.75);
+        o.connect(f); f.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.8);
+      }
+      playDog() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        [0, 0.22].forEach(d => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'triangle'; o.frequency.setValueAtTime(450, ctx.currentTime + d);
+          o.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + d + 0.14);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + d); g.gain.linearRampToValueAtTime(0.35, ctx.currentTime + d + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.16);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.17);
+        });
+      }
+      playBird() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        [0, 0.12, 0.24].forEach((d, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine'; const bf = 2600 + i * 300;
+          o.frequency.setValueAtTime(bf, ctx.currentTime + d);
+          o.frequency.exponentialRampToValueAtTime(bf + 900, ctx.currentTime + d + 0.04);
+          o.frequency.exponentialRampToValueAtTime(bf - 200, ctx.currentTime + d + 0.09);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + d); g.gain.linearRampToValueAtTime(0.2, ctx.currentTime + d + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.09);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.1);
+        });
+      }
+      playWolf() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(320, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(740, ctx.currentTime + 0.4);
+        o.frequency.linearRampToValueAtTime(690, ctx.currentTime + 0.9);
+        o.frequency.exponentialRampToValueAtTime(380, ctx.currentTime + 1.4);
+        g.gain.setValueAtTime(0.01, ctx.currentTime); g.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 0.3);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime + 1.55);
+      }
+      playRooster() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        let cur = 0;
+        [{ f: 550, d: 0.15 }, { f: 650, d: 0.15 }, { f: 620, d: 0.15 }, { f: 880, d: 0.55 }].forEach(n => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sawtooth'; o.frequency.setValueAtTime(n.f, ctx.currentTime + cur);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + cur); g.gain.linearRampToValueAtTime(0.22, ctx.currentTime + cur + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + cur + n.d);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + cur); o.stop(ctx.currentTime + cur + n.d + 0.05);
+          cur += n.d + 0.03;
+        });
+      }
+      playDonkey() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        [0, 0.35].forEach((d, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'triangle';
+          o.frequency.setValueAtTime(i === 0 ? 680 : 380, ctx.currentTime + d);
+          o.frequency.exponentialRampToValueAtTime(i === 0 ? 420 : 640, ctx.currentTime + d + 0.3);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + d); g.gain.linearRampToValueAtTime(0.28, ctx.currentTime + d + 0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.33);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.35);
+        });
+      }
+
+      // Contextual Physical SFX
+      playHammer() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        const o = ctx.createOscillator(), o2 = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(1150, ctx.currentTime);
+        o2.type = 'sine'; o2.frequency.setValueAtTime(2800, ctx.currentTime);
+        f.type = 'bandpass'; f.frequency.setValueAtTime(1200, ctx.currentTime); f.Q.setValueAtTime(12);
+        g.gain.setValueAtTime(0.01, ctx.currentTime);
+        g.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        o.connect(f); o2.connect(f); f.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o2.start(ctx.currentTime);
+        o.stop(ctx.currentTime + 0.4); o2.stop(ctx.currentTime + 0.4);
+      }
+      playRabbit() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        [0, 0.16].forEach(d => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine'; o.frequency.setValueAtTime(110, ctx.currentTime + d);
+          o.frequency.exponentialRampToValueAtTime(35, ctx.currentTime + d + 0.09);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + d);
+          g.gain.linearRampToValueAtTime(0.3, ctx.currentTime + d + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.1);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.11);
+        });
+      }
+      playAxe() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(180, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.12);
+        g.gain.setValueAtTime(0.01, ctx.currentTime);
+        g.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.22);
+      }
+      playSickle() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(1300, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(250, ctx.currentTime + 0.28);
+        f.type = 'bandpass'; f.frequency.setValueAtTime(900, ctx.currentTime); f.Q.setValueAtTime(5);
+        g.gain.setValueAtTime(0.01, ctx.currentTime);
+        g.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        o.connect(f); f.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.32);
+      }
+      playDough() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        [0, 0.14].forEach(d => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'triangle'; o.frequency.setValueAtTime(140, ctx.currentTime + d);
+          o.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + d + 0.08);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + d);
+          g.gain.linearRampToValueAtTime(0.25, ctx.currentTime + d + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.1);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.11);
+        });
+      }
+      playFire() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        [0, 0.08, 0.17, 0.26].forEach((d, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sawtooth'; o.frequency.setValueAtTime(900 + (i % 2) * 500, ctx.currentTime + d);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + d);
+          g.gain.linearRampToValueAtTime(0.18, ctx.currentTime + d + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.06);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.07);
+        });
+      }
+      playWaterStream() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        [0, 0.07, 0.14, 0.21, 0.28].forEach((d, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine'; o.frequency.setValueAtTime(650 + (i * 70), ctx.currentTime + d);
+          o.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + d + 0.05);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + d);
+          g.gain.linearRampToValueAtTime(0.16, ctx.currentTime + d + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.07);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.08);
+        });
+      }
+      playMilkStream() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        [0, 0.18].forEach(d => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'triangle'; o.frequency.setValueAtTime(1600, ctx.currentTime + d);
+          o.frequency.exponentialRampToValueAtTime(450, ctx.currentTime + d + 0.12);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + d);
+          g.gain.linearRampToValueAtTime(0.2, ctx.currentTime + d + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.14);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.15);
+        });
+      }
+      playFruitCrunch() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        [0, 0.04, 0.08].forEach(d => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sawtooth'; o.frequency.setValueAtTime(1800, ctx.currentTime + d);
+          o.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + d + 0.05);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + d);
+          g.gain.linearRampToValueAtTime(0.25, ctx.currentTime + d + 0.005);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.06);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.07);
+        });
+      }
+      playNutCrack() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'square'; o.frequency.setValueAtTime(750, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.08);
+        g.gain.setValueAtTime(0.01, ctx.currentTime);
+        g.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.1);
+      }
+      playRunning() {
+        const ctx = this.getCtx(); if (!ctx) return;
+        [0, 0.12, 0.24, 0.36].forEach(d => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine'; o.frequency.setValueAtTime(95, ctx.currentTime + d);
+          o.frequency.exponentialRampToValueAtTime(45, ctx.currentTime + d + 0.06);
+          g.gain.setValueAtTime(0.01, ctx.currentTime + d);
+          g.gain.linearRampToValueAtTime(0.25, ctx.currentTime + d + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.07);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.08);
+        });
+      }
+      playSFX(sfx) {
+        switch(sfx) {
+          case 'hammer': this.playHammer(); break;
+          case 'rabbit': this.playRabbit(); break;
+          case 'axe': this.playAxe(); break;
+          case 'sickle': this.playSickle(); break;
+          case 'dough': this.playDough(); break;
+          case 'fire': this.playFire(); break;
+          case 'water': this.playWaterStream(); break;
+          case 'milk': this.playMilkStream(); break;
+          case 'fruit': this.playFruitCrunch(); break;
+          case 'nut': this.playNutCrack(); break;
+          case 'running': this.playRunning(); break;
+          case 'plow': this.playRunning(); break;
+          case 'chickens': this.playBird(); break;
+        }
+      }
+      stopAudio() {
+        if (this.currentAudio) {
+          try {
+            this.currentAudio.pause();
+            this.currentAudio.currentTime = 0;
+          } catch(e) {}
+          this.currentAudio = null;
+        }
+      }
+      playAudio(src, onEnd = null) {
+        try {
+          this.stopAudio();
+          const a = new Audio(src);
+          this.currentAudio = a;
+          const finish = () => {
+            if (this.currentAudio === a) this.currentAudio = null;
+            if (onEnd) onEnd();
+          };
+          a.onended = finish;
+          a.onerror = finish;
+          const p = a.play();
+          if (p && p.catch) p.catch(() => finish());
+          return a;
+        } catch (e) {
+          if (onEnd) onEnd();
+        }
+      }
+
+      playAnimal(id, onEnd = null) {
+        const src = AUDIO_FILES.animals[id];
+        if (src) return this.playAudio(src, onEnd);
+        if (onEnd) onEnd();
+      }
+
+      playWord(id, onEnd = null) {
+        const src = AUDIO_FILES.words[id];
+        if (src) return this.playAudio(src, onEnd);
+        if (onEnd) onEnd();
+      }
+    }
+
+    const AUDIO_FILES = {
+      animals: {
+        ser: 'audio/animals/ser.ogg',
+        hesp: 'audio/animals/hesp.ogg',
+        pisik: 'audio/animals/pisik.wav',
+        kucik: 'audio/animals/kucik.ogg',
+        cucik: 'audio/animals/cucik.mp3',
+        gur: 'audio/animals/gur.ogg',
+        dik: 'audio/animals/dik.ogg',
+        ker: 'audio/animals/ker.wav'
+      },
+      words: {
+        ser: 'audio/words/ser.wav',
+        gur: 'audio/words/gur.wav',
+        hesp: 'audio/words/hesp.wav',
+        pisik: 'audio/words/pisik.wav',
+        kucik: 'audio/words/kucik.wav',
+        cucik: 'audio/words/cucik.wav',
+        dik: 'audio/words/dik.wav',
+        ker: 'audio/words/ker.wav',
+        berx: 'audio/words/berx.wav',
+        pez: 'audio/words/pez.wav',
+        celek: 'audio/words/celek.wav',
+        rovi: 'audio/words/rovi.wav',
+        teyr: 'audio/words/teyr.wav',
+        masi: 'audio/words/masi.wav',
+        bizin: 'audio/words/bizin.wav',
+        kew: 'audio/words/kew.wav',
+        mirisk: 'audio/words/mirisk.wav',
+        piling: 'audio/words/piling.wav',
+        fil: 'audio/words/fil.wav',
+        kevok: 'audio/words/kevok.wav',
+        bivir: 'audio/words/bivir.wav',
+        das: 'audio/words/das.wav',
+        cakuc: 'audio/words/cakuc.wav',
+        sur: 'audio/words/sur.wav',
+        xani: 'audio/words/xani.wav',
+        dibistan: 'audio/words/dibistan.wav',
+        baxce: 'audio/words/baxce.wav',
+        pir: 'audio/words/pir.wav',
+        kani: 'audio/words/kani.wav',
+        bazar: 'audio/words/bazar.wav',
+        dirav: 'audio/words/dirav.wav',
+        hez: 'audio/words/hez.wav',
+        roj: 'audio/words/roj.wav',
+        aferin: 'audio/words/aferin.wav',
+        nan: 'audio/words/nan.wav',
+        av: 'audio/words/av.wav',
+        sev: 'audio/words/sev.wav',
+        hinar: 'audio/words/hinar.wav',
+        dayik: 'audio/words/dayik.wav',
+        bav: 'audio/words/bav.wav',
+        genim: 'audio/words/genim.wav',
+        agir: 'audio/words/agir.wav',
+        sir: 'audio/words/sir.wav',
+        cirok: 'audio/words/cirok.wav'
+      }
+    };
+
+    const sound = new SoundEngine();
+
+    // --- COMPANION AVATARS ---
+    const COMPANIONS = [
+      { id: 'ser', name: 'Şêro', animal: 'Şêr', title: 'Şêrê Xurt ê Zagrosê', emoji: '🦁', pitch: 0.8, cry: 'Rrrr-Waouh!', catchphrase: 'Ez Şêro me, qiralê zinarên bilind ên Zagrosê!' },
+      { id: 'hesp', name: 'Semend', animal: 'Hesp', title: 'Hespê Beza Çeleng', emoji: '🐴', pitch: 0.95, cry: 'Hnnh-heee!', catchphrase: 'Ez Semend im, hevalê rêwîtiyên dûr û bayê lez!' },
+      { id: 'pisik', name: 'Mîşo', animal: 'Pisîk', title: 'Pisîka Şîrîn a Gund', emoji: '🐱', pitch: 1.25, cry: 'Miyaww!', catchphrase: 'Ez Mîşo me, çavên min wek stêrkan li nav gund dibirqin!' },
+      { id: 'kucik', name: 'Beso', animal: 'Kûçik', title: 'Kûçikê Dilsoz ê Parêzvan', emoji: '🐶', pitch: 1.1, cry: 'Haf-haf!', catchphrase: 'Ez Beso me, parêzvanê hevalan û gundê me yê xweşik!' },
+      { id: 'cucik', name: 'Çûço', animal: 'Çûçik', title: 'Çûçika Dengxweş a Çiqilan', emoji: '🐥', pitch: 1.45, cry: 'Cîk-cîk!', catchphrase: 'Ez Çûço me, li ser milê te stranên zimanê şêrîn dibêjim!' },
+      { id: 'gur', name: 'Qert', animal: 'Gur', title: 'Gurê Zîrek ê Çiyayan', emoji: '🐺', pitch: 0.85, cry: 'Aûûû!', catchphrase: 'Ez Qert im, hevalê koman û parêzvanê şevên asê!' },
+      { id: 'dik', name: 'Qoqoy', animal: 'Dîk', title: 'Dîkê Spêdeya Gund', emoji: '🐔', pitch: 1.2, cry: 'Qoqorîqo!', catchphrase: 'Ez Qoqoy im, her sibeh bi dengê xwe xewê ji çavan direvînim!' },
+      { id: 'ker', name: 'Kedkar', animal: 'Ker', title: 'Kerê Bêdeng û Dilnerm', emoji: '🫏', pitch: 0.9, cry: 'Î-ah-î-ah!', catchphrase: 'Ez Kedkar im, hevalê ked û barê giran ê cotkaran!' }
+    ];
+
+    // --- TOUCHABLE DICTIONARY ---
+    const TOUCH_DICT = {
+      coins_box: { wordId: 'dirav', name: 'Sindoqa Diravan', phonetic: 'Seen-do-qa Dee-ra-van', desc: 'Ev Sindoqa Diravan e! Diravên zêrîn ên gund li vir in.' },
+      energy_bolt: { wordId: 'hez', name: 'Hêza Birûskê', phonetic: 'Hay-za Bee-roos-kay', desc: 'Ev Hêza Birûskê ye! Ji bo zivirandina çerxa gund tê bikaranîn.' },
+      shield_icon: { wordId: null, name: 'Mertalê Parastinê', phonetic: 'Mehr-tah-lay Pah-rahs-tee-nay', desc: 'Ev Mertal e! Gundê me ji her êrîşekê diparêze.' },
+      sun_icon: { wordId: 'roj', name: 'Xor û Roj', phonetic: 'Xohr oo Rohzh', desc: 'Ev Xor û Roj e! Tîrêjên xwe yên germ berdide ser çiyayên Zagrosê.' },
+      village_level: { wordId: null, name: 'Asta Gund', phonetic: 'Ahs-tah Goond', desc: 'Ev Asta Gundê me ye! Her ku em ava bikin asta me bilind dibe.' }
+    };
+
+    const AJALAN = [
+      { id: 'ser', name: 'Şêr', phonetic: 'Sheyr', emoji: '🦁', desc: 'Qiralê daristanê û ajalê herî xurt.', rarity: 'zêrîn' },
+      { id: 'gur', name: 'Gur', phonetic: 'Gurr', emoji: '🐺', desc: 'Ajalê çiyayan û hevalê koman.', rarity: 'hêja' },
+      { id: 'hesp', name: 'Hesp', phonetic: 'Hasp', emoji: '🐴', desc: 'Hevalê beza lez û rêwîtiya dûr.', rarity: 'hêja' },
+      { id: 'rovi', name: 'Rovî', phonetic: 'Rovee', emoji: '🦊', desc: 'Ajalekî pir hişmend û zîrek.', rarity: 'asayî' },
+      { id: 'kevrusk', name: 'Kêvrûşk', phonetic: 'Kevrooshk', emoji: '🐰', desc: 'Guhdirêjê delal û beza nerm.', rarity: 'asayî' },
+      { id: 'celek', name: 'Çêlek', phonetic: 'Chaylek', emoji: '🐮', desc: 'Şîrê spî û xweş ji bo me peyda dike.', rarity: 'asayî' },
+      { id: 'berx', name: 'Berx', phonetic: 'Bahrkh', emoji: '🐑', desc: 'Bêçikê pezê yê nerm û spî.', rarity: 'asayî' },
+      { id: 'pez', name: 'Pez', phonetic: 'Paz', emoji: '🐏', desc: 'Xwediyê hiriyê ji bo cilên germ.', rarity: 'asayî' },
+      { id: 'pisik', name: 'Pisîk', phonetic: 'Piseek', emoji: '🐱', desc: 'Dostê malê yê lîstok û nermik.', rarity: 'asayî' },
+      { id: 'kucik', name: 'Kûçik', phonetic: 'Koochik', emoji: '🐶', desc: 'Dostê dilsoz ê parêzvanê gund.', rarity: 'asayî' },
+      { id: 'teyr', name: 'Teyr', phonetic: 'Tayrr', emoji: '🦅', desc: 'Qiralê asîman û bilindahiyên çiyan.', rarity: 'zêrîn' },
+      { id: 'masi', name: 'Masî', phonetic: 'Masee', emoji: '🐟', desc: 'Ajalê avên kûr û rûbarên zelal.', rarity: 'asayî' },
+      { id: 'hirc', name: 'Hirç', phonetic: 'Heerch', emoji: '🐻', desc: 'Ajalê mezin ê çiyayên bilind û hezkerê hingiv.', rarity: 'hêja' },
+      { id: 'bizin', name: 'Bizin', phonetic: 'Bizin', emoji: '🐐', desc: 'Ajalekî çeleng ku li ser zinarên asê dimeşe.', rarity: 'asayî' },
+      { id: 'kew', name: 'Kew', phonetic: 'Kaw', emoji: '🐦', desc: 'Çûkê bedew ê nav stranan û newalan.', rarity: 'hêja' },
+      { id: 'mirisk', name: 'Mirîşk', phonetic: 'Mireeshk', emoji: '🐔', desc: 'Hêkên spî û zer di baxçê de dide.', rarity: 'asayî' },
+      { id: 'legleg', name: 'Legleg', phonetic: 'Laglag', emoji: '🦩', desc: 'Çûkê koçber ê bi heybet û stûdirêj.', rarity: 'hêja' },
+      { id: 'cucik', name: 'Çûçik', phonetic: 'Choochik', emoji: '🐥', desc: 'Çûçika biçûk û dengxweş a li ser çiqilan.', rarity: 'asayî' },
+      { id: 'kusi', name: 'Kûsî', phonetic: 'Koosee', emoji: '🐢', desc: 'Ajalê hêdî yê bi qalikekî kevirî û zexm.', rarity: 'asayî' },
+      { id: 'meshingiv', name: 'Mêşhingiv', phonetic: 'Maysh-heengeev', emoji: '🐝', desc: 'Çêkerê hingivê şîrîn û hevalê kulîlkan.', rarity: 'hêja' },
+      { id: 'piling', name: 'Piling', phonetic: 'Peeling', emoji: '🐅', desc: 'Xwediyê leza mezin û nexşên bedew.', rarity: 'zêrîn' },
+      { id: 'fil', name: 'Fîl', phonetic: 'Feel', emoji: '🐘', desc: 'Ajalê herî mezin ê li ser rûyê erdê.', rarity: 'zêrîn' },
+      { id: 'kevok', name: 'Kevok', phonetic: 'Kawok', emoji: '🕊️', desc: 'Sembola aştî û hezkirina li nav gund.', rarity: 'asayî' }
+    ];
+
+    const AMUR = [
+      { id: 'bivir', name: 'Bivir', phonetic: 'Bivir', emoji: '🪓', desc: 'Amûra birîna daran ji bo agirê germ.', rarity: 'asayî' },
+      { id: 'bel', name: 'Bêl', phonetic: 'Beyl', emoji: '⛏️', desc: 'Amûra kolandina axê û çandina daran.', rarity: 'asayî' },
+      { id: 'das', name: 'Das', phonetic: 'Dahs', emoji: '🌾', desc: 'Amûra berhevkirina genim û gihayê zeviyan.', rarity: 'asayî' },
+      { id: 'cakuc', name: 'Çakûç', phonetic: 'Chakooch', emoji: '🔨', desc: 'Amûra lêxistina bizmaran û avakirina xaniyan.', rarity: 'asayî' },
+      { id: 'satil', name: 'Satil', phonetic: 'Satil', emoji: '🪣', desc: 'Ji bo hildana ava kaniyê ya paqij.', rarity: 'asayî' },
+      { id: 'meqes', name: 'Meqes', phonetic: 'Maqas', emoji: '✂️', desc: 'Amûra birîna qumaş û hiriyê.', rarity: 'asayî' },
+      { id: 'kevan', name: 'Kevan', phonetic: 'Kawan', emoji: '🏹', desc: 'Amûra parastina gund û nêçîrê.', rarity: 'hêja' },
+      { id: 'zincir', name: 'Zîncîr', phonetic: 'Zeenjeer', emoji: '⛓️', desc: 'Zîncîra hesinî ya pir xurt.', rarity: 'hêja' },
+      { id: 'sur', name: 'Şûr', phonetic: 'Shoor', emoji: '⚔️', desc: 'Şûrê hesinî yê lehengên gund ji bo parastinê.', rarity: 'zêrîn' },
+      { id: 'tur', name: 'Tûr', phonetic: 'Toor', emoji: '🎒', desc: 'Tûrê hirî ji bo hilgirtina keresteyan.', rarity: 'asayî' }
+    ];
+
+    const GIRING = [
+      { id: 'nan', name: 'Nan', phonetic: 'Nahn', emoji: '🫓', desc: 'Nanê germ ê sêlê û tendûra kurdî.', rarity: 'zêrîn' },
+      { id: 'av', name: 'Av', phonetic: 'Ahv', emoji: '💧', desc: 'Ava zelal a kaniyên Zagrosê.', rarity: 'zêrîn' },
+      { id: 'genim', name: 'Genim', phonetic: 'Geh-neem', emoji: '🌾', desc: 'Genimê zêrîn ê deşt û zeviyên me.', rarity: 'zêrîn' },
+      { id: 'sev', name: 'Sêv', phonetic: 'Sayv', emoji: '🍎', desc: 'Sêva sor a şîrîn a baxçeyên Zagrosê.', rarity: 'hêja' },
+      { id: 'hinar', name: 'Hinar', phonetic: 'Hee-nahr', emoji: '🪴', desc: 'Hinarên yaqûtî yên tijî libên şîrîn.', rarity: 'hêja' },
+      { id: 'dayik', name: 'Dayik', phonetic: 'Dah-yeek', emoji: '👩', desc: 'Dayika delal û kedkara dilsoz a malê.', rarity: 'zêrîn' },
+      { id: 'bav', name: 'Bav', phonetic: 'Bahv', emoji: '👨', desc: 'Bavê kedkar ê cotkar û parêzvanê gund.', rarity: 'zêrîn' },
+      { id: 'agir', name: 'Agir', phonetic: 'Ah-geer', emoji: '🔥', desc: 'Agirê germ ê argûn, sobe û sêlê.', rarity: 'hêja' },
+      { id: 'sir', name: 'Şîr', phonetic: 'Sheer', emoji: '🥛', desc: 'Şîrê spî û xweş ê dewar û pezan.', rarity: 'asayî' },
+      { id: 'cirok', name: 'Çîrok', phonetic: 'Chee-rohk', emoji: '📜', desc: 'Çîrok û destanên dengbêjan ên şevbuhêrkê.', rarity: 'zêrîn' }
+    ];
+
+    const ALL_ITEMS = [...AJALAN, ...AMUR, ...GIRING];
+
+    const BUILDINGS = [
+      { id: 'xani', wordId: 'xani', name: 'Xaniyê Gund', level: 1, maxLevel: 5, baseCost: 200, icon: '🏡', perks: '+50 Dirav di saetê de', desc: 'Xaniyê germ ê ji kevir û daran bo zarokên gund.' },
+      { id: 'as', wordId: null, name: 'Aşê Avê', level: 1, maxLevel: 5, baseCost: 350, icon: '⚙️', perks: '+1 Hêz di 10 xulekan de', desc: 'Aşê avê yê ku bi ava rûbarê genim dikoje.' },
+      { id: 'dibistan', wordId: 'dibistan', name: 'Dibistana Zimanê', level: 1, maxLevel: 5, baseCost: 500, icon: '🏫', perks: 'Qerta nû ya zêrîn veke', desc: 'Cihê fêrbûna tîpên latînî û peyvên Kurdî.' },
+      { id: 'baxce', wordId: 'baxce', name: 'Baxçeyê Fêkiyan', level: 1, maxLevel: 5, baseCost: 300, icon: '🌳', perks: '+200 Dirav ji her çinînê', desc: 'Sêv, hinar û tiriyên şîrîn ên gundê me.' },
+      { id: 'pir', wordId: 'pir', name: 'Pira Kevirî', level: 1, maxLevel: 5, baseCost: 450, icon: '🌉', perks: 'Gihîştina cîranan û gundên din', desc: 'Pira kevnar a li ser çemê gund.' },
+      { id: 'kaniya_ave', wordId: 'kani', name: 'Kaniya Avê', level: 1, maxLevel: 5, baseCost: 400, icon: '⛲', perks: '+80 Dirav di saetê de', desc: 'Kaniya ava sar û zelal a çiyayê gundê me.' },
+      { id: 'bazara_gund', wordId: 'bazar', name: 'Bazara Gund', level: 1, maxLevel: 5, baseCost: 600, icon: '🏪', perks: '+10% xelata çerxê', desc: 'Cihê danûstandin û firotina fêkî û genim.' }
+    ];
+
+    const REWARDS = [
+      { type: 'coins', amount: 200, label: '200 Dirav', color: '#FBBF24', icon: '🪙' },
+      { type: 'energy', amount: 5, label: '+5 Hêz', color: '#38BDF8', icon: '⚡' },
+      { type: 'shield', amount: 1, label: '1 Mertal', color: '#34D399', icon: '🛡️' },
+      { type: 'coins', amount: 500, label: '500 Dirav', color: '#F59E0B', icon: '💰' },
+      { type: 'card', amount: 1, label: 'Karta Zimanê', color: '#EC4899', icon: '🃏' },
+      { type: 'raid', amount: 1, label: 'Êrîşa Dostane', color: '#A855F7', icon: '⚔️' },
+      { type: 'coins', amount: 1000, label: '1,000 Dirav!', color: '#EF4444', icon: '👑' },
+      { type: 'energy', amount: 10, label: '+10 Hêz', color: '#06B6D4', icon: '⚡⚡' }
+    ];
+
+    // --- 31 LETTERS OF KURDISH HAWAR ALPHABET ---
+    const KURDISH_ALPHABET = [
+      { letter: "A", name: "A", phonetic: "Ah", exampleWord: "Av", exampleMeaning: "Ava zelal a kaniyên Zagrosê", icon: "💧", wordId: "av" },
+      { letter: "B", name: "Bê", phonetic: "Bay", exampleWord: "Bivir", exampleMeaning: "Amûra birîna daran bo zivistanê", icon: "🪓", wordId: "bivir" },
+      { letter: "C", name: "Cê", phonetic: "Jay", exampleWord: "Cencer", exampleMeaning: "Amûra bagerê bo veqetandina genim", icon: "🧺", wordId: "hez" },
+      { letter: "Ç", name: "Çê", phonetic: "Chay", exampleWord: "Çakûç", exampleMeaning: "Amûra hesinî ya lêxistina bizmaran", icon: "🔨", wordId: "cakuc" },
+      { letter: "D", name: "Dê", phonetic: "Day", exampleWord: "Das", exampleMeaning: "Dasa tûj a çinîna genimê zêrîn", icon: "🌾", wordId: "das" },
+      { letter: "E", name: "E", phonetic: "Eh", exampleWord: "Erd", exampleMeaning: "Axa comerd a zeviyên çandiniyê", icon: "🌍", wordId: "hez" },
+      { letter: "Ê", name: "Ê", phonetic: "Ay", exampleWord: "Êzing", exampleMeaning: "Êzingên hişk ên argûn û sobeyê", icon: "🪵", wordId: "bivir" },
+      { letter: "F", name: "Fê", phonetic: "Fay", exampleWord: "Fîl", exampleMeaning: "Ajalê xurt û mezin ê cîhanê", icon: "🐘", wordId: "fil" },
+      { letter: "G", name: "Gê", phonetic: "Gay", exampleWord: "Genim", exampleMeaning: "Genimê zêrîn ê nanê sêlê û tendûrê", icon: "🌾", wordId: "genim" },
+      { letter: "H", name: "Hê", phonetic: "Hay", exampleWord: "Hesp", exampleMeaning: "Hespê beza çeleng ê rêwîtiyên dûr", icon: "🐴", wordId: "hesp" },
+      { letter: "I", name: "I", phonetic: "Ih", exampleWord: "Satil", exampleMeaning: "Satila hildana ava kaniyê", icon: "🪣", wordId: "kani" },
+      { letter: "Î", name: "Î", phonetic: "Ee", exampleWord: "Îsot", exampleMeaning: "Îsota tûj a baxçeyên gund", icon: "🌶️", wordId: "baxce" },
+      { letter: "J", name: "Jê", phonetic: "Zhay", exampleWord: "Jiyan", exampleMeaning: "Jiyana xweş û aram a li nav xwezayê", icon: "🏡", wordId: "xani" },
+      { letter: "K", name: "Kê", phonetic: "Kay", exampleWord: "Kûçik", exampleMeaning: "Hevalê dilsoz û parêzvanê gund", icon: "🐶", wordId: "kucik" },
+      { letter: "L", name: "Lê", phonetic: "Lay", exampleWord: "Legleg", exampleMeaning: "Çûkê koçber ê ser baniyên bilind", icon: "🦩", wordId: "cucik" },
+      { letter: "M", name: "Mê", phonetic: "May", exampleWord: "Mirîşk", exampleMeaning: "Mirîşka hewşê ya hêkên spî û zer", icon: "🐔", wordId: "mirisk" },
+      { letter: "N", name: "Nê", phonetic: "Nay", exampleWord: "Nan", exampleMeaning: "Nanê germ ê sêlê û tendûra kurdî", icon: "🫓", wordId: "nan" },
+      { letter: "O", name: "O", phonetic: "Oh", exampleWord: "Ode", exampleMeaning: "Odeya germ a şevbuhêrk û mêvanan", icon: "🛋️", wordId: "xani" },
+      { letter: "P", name: "Pê", phonetic: "Pay", exampleWord: "Pisîk", exampleMeaning: "Pisîka şîrîn a nermik a li ber sobe", icon: "🐱", wordId: "pisik" },
+      { letter: "Q", name: "Qê", phonetic: "Qay", exampleWord: "Qert", exampleMeaning: "Gurê zîrek ê çiyayên asê", icon: "🐺", wordId: "gur" },
+      { letter: "R", name: "Rê", phonetic: "Ray", exampleWord: "Rovî", exampleMeaning: "Roviyê hişmend û fêlbaz ê newalan", icon: "🦊", wordId: "rovi" },
+      { letter: "S", name: "Sê", phonetic: "Say", exampleWord: "Sêv", exampleMeaning: "Sêva sor a şîrîn a baxçeyên Zagrosê", icon: "🍎", wordId: "sev" },
+      { letter: "Ş", name: "Şê", phonetic: "Shay", exampleWord: "Şêr", exampleMeaning: "Şêrê xurt ê zinarên bilind", icon: "🦁", wordId: "ser" },
+      { letter: "T", name: "Tê", phonetic: "Tay", exampleWord: "Teyr", exampleMeaning: "Teyrê baz ê azad ê asîmanan", icon: "🦅", wordId: "teyr" },
+      { letter: "U", name: "U", phonetic: "Oo", exampleWord: "Gund", exampleMeaning: "Gundê me yê xweşik û aram", icon: "🏘️", wordId: "xani" },
+      { letter: "Û", name: "Û", phonetic: "Ooo", exampleWord: "Şûr", exampleMeaning: "Şûrê hesinî yê parêzvanên gund", icon: "⚔️", wordId: "sur" },
+      { letter: "V", name: "Vê", phonetic: "Vay", exampleWord: "Vexwarin", exampleMeaning: "Vexwarina çaya germ a di piyalan de", icon: "🍵", wordId: "kani" },
+      { letter: "W", name: "Wê", phonetic: "Way", exampleWord: "Werz", exampleMeaning: "Çar werzên salê: bihar, havîn, payîz, zivistan", icon: "🍁", wordId: "roj" },
+      { letter: "X", name: "Xê", phonetic: "Xay", exampleWord: "Xanî", exampleMeaning: "Xaniyê ji kevir û daran ê gund", icon: "🏠", wordId: "xani" },
+      { letter: "Y", name: "Yê", phonetic: "Yay", exampleWord: "Yaqût", exampleMeaning: "Hinarên yaqûtî yên tijî tovên şîrîn", icon: "💎", wordId: "hinar" },
+      { letter: "Z", name: "Zê", phonetic: "Zay", exampleWord: "Zozan", exampleMeaning: "Zozanên kesk û bilind ên havînê", icon: "⛰️", wordId: "hez" }
+    ];
+
+    // --- CARTOON FILM EPISODES ---
+    const CARTOON_EPISODES = [
+      {
+        id: "ep_spede_dayik",
+        number: 1,
+        title: "Xelek 1: Spêdeya Gund & Mala Dayikê",
+        subtitle: "Rojbaşî ji jiyana rojane ya dayika Kurd",
+        theme: "Spêdeya Zû & Xebata Malê",
+        character: "Dayik",
+        backdropEmoji: "🏡",
+        storyText: "Dema ku tav li ser lûtkeyên Zagrosê hiltê, dîk bi dengê xwe yê bilind gund şiyar dike. Dayika me serê sibehê zû radibe, destûçavên xwe bi ava kaniya sar dişo, hevîr distre û agirê tendûrê pê dixe. Bêhna nanê germ ê sêlê li seranserê kuçeyên gund belav dibe.",
+        dialogueLines: [
+          { speaker: "Dayik", text: "Rojbaş zarokên min! Were em nanê germ ê sêlê û dewa teze amade bikin!", phonetic: "Rohzh-bahsh zah-roh-kayn meen", avatar: "👩" },
+          { speaker: "Heval", text: "Nanê sêlê û penêrê kurdî çiqas bînxweş û şîrîn e!", phonetic: "Nah-nay say-lay oo pah-nayr", avatar: "🦁" }
+        ],
+        hotspots: [
+          { id: "hevir_strandin", name: "Hevîr Strandin", verb: "Hevîr strandin", phonetic: "Heh-vee-ray geh-neem dees-treh", description: "Hevîrê nanê genimê spî bi ava kaniyê tê strandin.", narration: "Dayik hevîrê genim distre da ku bo zarokan nanê bînxweş çêbike!", sfx: "dough", wordId: "genim", icon: "🥣" },
+          { id: "nane_sele_tendur", name: "Nanê Sêlê & Tendûr", verb: "Nan pêjan", phonetic: "Nah-nay say-lay oo tehn-oo-ray pee-pay-zheh", description: "Nanê zirav ê sêlê û nanê tîr ê tendûrê bi agirê daran tê pêjan.", narration: "Li ser sêla hesinî û nav tendûrê nanê zêrîn dipêje!", sfx: "fire", wordId: "nan", icon: "🫓" },
+          { id: "mesk_hejandin", name: "Meşk Hejandin", verb: "Meşk hejandin", phonetic: "Mehshk heh-zhahn-deen", description: "Meşka darîn tê hejandin da ku nivîşkê zer û dewa sar jê derkeve.", narration: "Dayik meşkê dihejîne bo amadekirina nivîşkê teze û dewa sar!", sfx: "milk", wordId: "sir", icon: "🥛" },
+          { id: "dane_miriskan", name: "Danê Mirîşkan & Çûçikan", verb: "Dan reşandin", phonetic: "Dahn oo gah-rees boh mee-reesh-kahn", description: "Danê garisê zer di hewşê de tê reşandin da ku mirîşk têr bibin.", narration: "Mirîşk û çûçikên hewşê bi beza xwe tên da ku danê garis bixwin!", sfx: "chickens", wordId: "mirisk", icon: "🐔" }
+        ],
+        quizQuestion: {
+          question: "Dayik serê sibehê çi dipêje?",
+          options: [
+            { text: "Nanê Sêlê & Tendûrê", correct: true, phonetic: "Nah-nay say-lay", icon: "🫓" },
+            { text: "Sêva Sor", correct: false, phonetic: "Say-vah sohr", icon: "🍎" },
+            { text: "Bivirê Hesinî", correct: false, phonetic: "Bee-veer", icon: "🪓" }
+          ],
+          rewardCoins: 200
+        }
+      },
+      {
+        id: "ep_bihar_cotkar",
+        number: 2,
+        title: "Xelek 2: Bihara Şên & Karên Zeviyê",
+        subtitle: "Vejîna çiyayan, cotkirina axê û çûyîna zozanan",
+        theme: "Bihara Rengîn & Çandinî",
+        season: "Bihar",
+        character: "Bav & Dayik",
+        backdropEmoji: "🌱",
+        storyText: "Berfa li ser lûtkeyên Zagrosê dihele û dibe cobarên zîvîn. Çiya bi kulîlkên sor û binefşî dixemilin. Jin û zarok diçin binarên çiyayan bo berhevkirina kenger, rîvas û sîrikên xweş. Bavê me cotek gayên xurt û hespan bi hevsar dike û axa nerm cot dike bo çandina genim.",
+        dialogueLines: [
+          { speaker: "Bav", text: "Bi xêr hatî bihara kesk! Em ê axa gund cot bikin da ku zevî tijî genim bibin!", phonetic: "Bee xayr hah-tee bee-hah-rah kahsk", avatar: "👨" },
+          { speaker: "Dayik", text: "Me selikên xwe tijî rîvas û kengerên nû yên çiyayê Zagrosê kirin!", phonetic: "Ree-vahs oo kahn-gehr", avatar: "👩" }
+        ],
+        hotspots: [
+          { id: "cotkari_ga", name: "Cotkirina Zeviyê bi Ga û Hespan", verb: "Zevî cot kirin", phonetic: "Zehr-vee jot kee-reen", description: "Cotkar axa nerm a Zagrosê bi hesinê cotê vedike bo tovçandinê.", narration: "Bav zeviyan cot dike da ku ax amade bibe ji bo tova genim û ceh!", sfx: "plow", wordId: "hesp", icon: "🐂" },
+          { id: "tovresandin_genim", name: "Tovreşandina Genim", verb: "Tov reşandin", phonetic: "Tohv reh-shahn-deen", description: "Tova genim bi destên cotkar li ser axa nerm tê reşandin.", narration: "Bav tova zêrîn a genim li nav xetên axê direşîne bo keda gund!", sfx: "running", wordId: "genim", icon: "🌾" },
+          { id: "berhevkirina_rivas", name: "Kenger & Rîvasên Çiyayê Zagrosê", verb: "Rîvas çinîn", phonetic: "Ree-vahs oo kahn-gehr chee-neen", description: "Giyayên xwerû yên şîrîn û tirş li binarê çiyayan tên komkirin.", narration: "Rîvasên tirş û kengerên kêvî bi kêfxweşî ji nav zinaran tên berhevkirin!", sfx: "fruit", wordId: "av", icon: "🌿" }
+        ],
+        quizQuestion: {
+          question: "Di biharê de li çiyayan kîjan giyayê xweş tê çinîn?",
+          options: [
+            { text: "Rîvas û Kenger", correct: true, phonetic: "Ree-vahs oo kahn-gehr", icon: "🌿" },
+            { text: "Êzingên Sobe", correct: false, phonetic: "Ay-zeeng", icon: "🪵" },
+            { text: "Berfa Sar", correct: false, phonetic: "Bahrf", icon: "❄️" }
+          ],
+          rewardCoins: 250
+        }
+      },
+      {
+        id: "ep_havin_cinin",
+        number: 3,
+        title: "Xelek 3: Havîna Zêrîn & Çinîna Genim",
+        subtitle: "Keda giran a cotkaran û çerxa aşê avê",
+        theme: "Havîna Germ & Zêrîna Genim",
+        season: "Havîn",
+        character: "Bav",
+        backdropEmoji: "☀️",
+        storyText: "Di tîrêjên germ ên tava havînê de, simbilên genim li deştê wek zêr dibirqin. Cotkarên gund bi dasên tûj dikevin nav zeviyan. Dengê birîna simbilan û stranên çinînê bilind dibin. Piştî bagerê, genimê paqij tê barkirin bo aşê avê da ku bibe arê spî yê nan.",
+        dialogueLines: [
+          { speaker: "Bav", text: "Dasa min tûj e, genimê me gihiştiye! Were em simbilan berhev bikin!", phonetic: "Dah-sah meen toozh eh", avatar: "👨" },
+          { speaker: "Heval", text: "Aşê avê bi ava rûbarê dizivire û genim dihêre!", phonetic: "Ah-shay ah-vay", avatar: "🐴" }
+        ],
+        hotspots: [
+          { id: "das_cinina_genim", name: "Çinîna Genim bi Dasê", verb: "Genim çinîn", phonetic: "Chee-nee-nah geh-neem bee dah-sah toozh", description: "Dasa hesinî ya tûj simbilên genim ji koka wan dibire.", narration: "Bav bi dasa tûj genim diçine û simbilên zêrîn dike baqên mezin!", sfx: "sickle", wordId: "das", icon: "🌾" },
+          { id: "cencer_bagera_genim", name: "Gerandina Cencer & Bagerê", verb: "Bager gêran", phonetic: "Bah-gehr gay-rahn", description: "Pûş û kayê ji genimê paqij cuda dikin bi baweşandinê.", narration: "Genim li ser bagerê tê baweşandin da ku danê paqij were komkirin!", sfx: "running", wordId: "genim", icon: "🧺" },
+          { id: "ase_ave_havin", name: "Aşê Avê yê Gund", verb: "Genim hêrandin", phonetic: "Ah-shay ah-vay yay goond", description: "Kevirê girankêş ê aş bi herikîna avê dizivire û genim dike ar.", narration: "Aşê avê yê gund genimê havînê dike arê spî ji bo nanê malê!", sfx: "water", wordId: "pir", icon: "⚙️" }
+        ],
+        quizQuestion: {
+          question: "Genim di havînê de bi kîjan amûrê tê çinîn?",
+          options: [
+            { text: "Bi Dasê", correct: true, phonetic: "Bee dah-say", icon: "🌾" },
+            { text: "Bi Meqesê", correct: false, phonetic: "Bee mah-qah-say", icon: "✂️" },
+            { text: "Bi Bêlê", correct: false, phonetic: "Bee bay-lay", icon: "⛏️" }
+          ],
+          rewardCoins: 250
+        }
+      },
+      {
+        id: "ep_payiz_dosav",
+        number: 4,
+        title: "Xelek 4: Payîza Comerd & Baxçeyên Fêkiyan",
+        subtitle: "Çinîna sêv, hinar û kelandina doşava tîrî",
+        theme: "Payîza Zêrîn & Xwarinên Zivistanê",
+        season: "Payîz",
+        character: "Dayik & Bav",
+        backdropEmoji: "🍎",
+        storyText: "Baweşîna bayê payîzê pelên daran zêrîn dike. Baxçeyên Zagrosê tijî bereket in; sêvên sor, hinarên yaqûtî û guşiyên tîriyê şîrîn tên çinîn. Dayik di qazanên mezin de doşava tîrî dikele, bastêq li ber tavê radixe û bav gûzên darên mezin diweşîne.",
+        dialogueLines: [
+          { speaker: "Dayik", text: "Bêhna doşav û bastêqa nû pir xweş e! Zivistana me dê bi van şîrînahiyan germ bibe!", phonetic: "Doh-shahv oo bahs-tayq", avatar: "👩" },
+          { speaker: "Bav", text: "Min gûzên darê weşandin, kîsikên me bo zivistanê amade ne!", phonetic: "Gooz oo kahn-gehr", avatar: "👨" }
+        ],
+        hotspots: [
+          { id: "seva_sor_payiz", name: "Dara Sêvan — Sêvên Sor", verb: "Sêv çinîn", phonetic: "Say-vahn chee-neen", description: "Sêvên sor û avdar ên baxçeyên Zagrosê tên çinîn.", narration: "Ev dara sêvan e! Sêvên sor ên şîrîn bi hezkirin tên çinîn!", sfx: "fruit", wordId: "sev", icon: "🍎" },
+          { id: "hinara_yaquti_payiz", name: "Dara Hinaran — Hinarên Yaqûtî", verb: "Hinar jêkirin", phonetic: "Hee-nah-rahn zheh-kee-reen", description: "Hinarên sor ên tijî libên yaqûtî ji çiqilan tên veqetandin.", narration: "Hinarên yaqûtî yên delal dilê her zarokî şa dikin!", sfx: "fruit", wordId: "hinar", icon: "🪴" },
+          { id: "dosav_kelandin", name: "Kelandina Doşavê & Bastêq", verb: "Doşav kelandin", phonetic: "Doh-shahv keh-lahn-deen", description: "Ava tîriyê şîrîn di beroşan de dikele û dibe doşav û bastêq.", narration: "Ava tîriyê li ser agir dikele da ku bibe doşav û bastêqa zivistanê!", sfx: "fire", wordId: "agir", icon: "🍇" },
+          { id: "guz_wesandin", name: "Dara Gûzan — Gûz Weşandin", verb: "Gûz weşandin", phonetic: "Gooz weh-shahn-deen", description: "Gûzên qalik-hişk bi daran tên weşandin bo şevên zivistanê.", narration: "Gûzên zexm ji ser daran tên weşandin bo şevbuhêrkên sar!", sfx: "nut", wordId: "bivir", icon: "🌰" }
+        ],
+        quizQuestion: {
+          question: "Ji ava tîriyê ya şîrîn çi tê çêkirin?",
+          options: [
+            { text: "Doşav & Bastêq", correct: true, phonetic: "Doh-shahv oo bahs-tayq", icon: "🍇" },
+            { text: "Hevîrê Nan", correct: false, phonetic: "Heh-vee-ray nahn", icon: "🥣" },
+            { text: "Dasa Tûj", correct: false, phonetic: "Dah-sah toozh", icon: "🌾" }
+          ],
+          rewardCoins: 250
+        }
+      },
+      {
+        id: "ep_zivistan_banesk",
+        number: 5,
+        title: "Xelek 5: Zivistana Berfîn & Malbatên Kurd",
+        subtitle: "Baneşk kirina serbaniyê, şikandina êzingan û aramiya malê",
+        theme: "Zivistana Spî & Malbata Germ",
+        season: "Zivistan",
+        character: "Bav",
+        backdropEmoji: "❄️",
+        storyText: "Lûtkeyên serbilind ên Zagrosê kirasê spî yê berfê li xwe dikin. Berf li ser baniyên xaniyan kom dibe. Bav bi kevirê giran ê baneşkê serbaniyê nerm û zexm dike da ku av neherike. Li hewşê bi bivirê êzingên hişk dişikîne bo geşkirina sobe û argûna germ a odeya zarokan.",
+        dialogueLines: [
+          { speaker: "Bav", text: "Berf zêde bariya! Divê em baneşkê li serbaniyê bigerînin û êzingan bişkînin!", phonetic: "Bah-neshk oo ay-zeeng", avatar: "👨" },
+          { speaker: "Heval", text: "Agirê sobe û argûnê odeyê germ û xweş dike!", phonetic: "Ah-geer yay soh-beh", avatar: "🐱" }
+        ],
+        hotspots: [
+          { id: "banesk_kirin", name: "Baneşk Kirina Serbaniyê", verb: "Baneşk kirin", phonetic: "Bah-neshk kee-reen", description: "Kevirê gilover ê baneşkê li ser axa banê tê gerandin da ku berf neherike.", narration: "Bav kevirê baneşkê li ser banê digerîne da ku xanî zexm û germ bimîne!", sfx: "running", wordId: "xani", icon: "🪨" },
+          { id: "ezing_sikandin", name: "Şikandina Êzingan bi Bivirê", verb: "Êzing şikandin", phonetic: "Ay-zeeng shee-kahn-deen bee bee-veer", description: "Qurmên daran bi bivirê têne qelaştin ji bo sobeyê.", narration: "Bav bi bivirê êzingên daran parçe dike bo germkirina odeya me!", sfx: "axe", wordId: "bivir", icon: "🪓" },
+          { id: "alifdana_kadine", name: "Alifdana Dewaran di Kadînê de", verb: "Alif dan", phonetic: "Ah-leef dahn boh deh-wah-rahn", description: "Kayê hişk û gihayê havînê didin ber pez û dewaran di sermayê de.", narration: "Dewar û pez di kadîna germ de gihayê havînê yê zêrîn dixwin!", sfx: "running", wordId: "pez", icon: "🐑" }
+        ],
+        quizQuestion: {
+          question: "Bav bi kîjan kevirê giran serbaniya xênî zexm dike?",
+          options: [
+            { text: "Kevirê Baneşkê", correct: true, phonetic: "Kah-vee-ray bah-nesh-kay", icon: "🪨" },
+            { text: "Dasa Tûj", correct: false, phonetic: "Dahs", icon: "🌾" },
+            { text: "Satila Avê", correct: false, phonetic: "Sah-teel", icon: "🪣" }
+          ],
+          rewardCoins: 250
+        }
+      },
+      {
+        id: "ep_sevbuherk_dengbej",
+        number: 6,
+        title: "Xelek 6: Şevbuhêrka Kurdî & Civata Dengbêj",
+        subtitle: "Civata germ a dora kûrsiyê, çaya germ, kilam û çîrokên kevnar",
+        theme: "Şevbuhêrk & Hunerê Dengbêjiyê",
+        character: "Kalo & Dengbêj",
+        backdropEmoji: "🌙",
+        storyText: "Di şevên dirêj ên zivistanê de, malbat û cîran li dora kûrsî û sobeya germ a darîn kom dibin. Dayik çaya germ a di fîncanên kember-zirav de pêşkêş dike. Zarok gûzên qelandî, bastêq û mewîjan dixwin. Kalê çîrokbêj serpêhatiyên Mem û Zîn vedibêje, Dengbêj bi dengê xwe yê kûr û zelal kilamên lehengiyê dibêje û zarok bi mamikan aqilê xwe diceribînin.",
+        dialogueLines: [
+          { speaker: "Kalo", text: "Kerem bikin dora kûrsiya germ! Werin guh bidin çîroka Mîr û Hespan!", phonetic: "Kah-rahm bee-keen doh-rah koor-see-yah geh-rm", avatar: "👴" },
+          { speaker: "Dengbêj", text: "Dengê min dengê çiyayên Zagrosê ye! Kilamên şahî û bîranînê dibêjim!", phonetic: "Dahn-gay meen dahn-gay chee-yah-yayn Zah-grohs eh", avatar: "🎙️" }
+        ],
+        hotspots: [
+          { id: "kursiya_germ", name: "Kûrsî & Sobeya Germ", verb: "Civat gerandin", phonetic: "Koor-see oo soh-beh", description: "Cihê komkirina germ a malbatê di şevên sar ên zivistanê de.", narration: "Li dora kûrsiya germ malbat û heval çîrokên xweş parve dikin!", sfx: "fire", wordId: "agir", icon: "🔥" },
+          { id: "chaya_germ", name: "Çaya Germ a di Piyalan de", verb: "Çay vexwarin", phonetic: "Chah-yah geh-rm vah-xwah-reen", description: "Çaya rengîn a li ser komirê amade bûye bi bînxweşî tê vexwarin.", narration: "Çaya germ a di piyalên zelal de dilê her mêvanekî germ dike!", sfx: "water", wordId: "kani", icon: "🍵" },
+          { id: "mewij_guz_basteq", name: "Mewîj, Bastêq & Gûzên Şevbuhêrkê", verb: "Gûz şikandin", phonetic: "Meh-weezh, bahs-tayq oo gooz", description: "Şîrînahiyên bereketa payîzê ji bo şevbuhêrka dirêj a zivistanê.", narration: "Gûzên qelandî, bastêqên şîrîn û mewîjên zer tên xwarin!", sfx: "nut", wordId: "bivir", icon: "🌰" },
+          { id: "dengbej_stran", name: "Dengbêj & Kilamên Kurdî", verb: "Kilam gotin", phonetic: "Dahn-gbayzh oo kee-lahm", description: "Dengbêjê Kurd bê amûr bi dengê xwe yê resen dîrok û destanan dibêje.", narration: "Dengbêj bi dengekî bilind destanên çiyayan û lehengiyê dixwîne!", sfx: "running", wordId: "cirok", icon: "🎙️" }
+        ],
+        quizQuestion: {
+          question: "Dengbêj di şevbuhêrkê de çi dibêje?",
+          options: [
+            { text: "Kilam & Destanên Kurdî", correct: true, phonetic: "Kee-lahm oo dehs-tahn", icon: "🎙️" },
+            { text: "Nanê Sêlê", correct: false, phonetic: "Nahn", icon: "🫓" },
+            { text: "Bivirê Hesinî", correct: false, phonetic: "Bee-veer", icon: "🪓" }
+          ],
+          rewardCoins: 300
+        }
+      }
+    ];
+    const VILLAGE_LIFE_SCENES = CARTOON_EPISODES;
+
+    // --- MAIN REACT COMPONENT ---
+    function App() {
+      const [tab, setTab] = useState('journey');
+      const [coins, setCoins] = useState(1000);
+      const [energy, setEnergy] = useState(30);
+      const [shields, setShields] = useState(2);
+      const [level, setLevel] = useState(1);
+      const [bState, setBState] = useState(BUILDINGS);
+      const [unlocked, setUnlocked] = useState(['ser', 'pisik', 'bivir', 'cakuc', 'nan', 'av', 'genim', 'sev', 'hinar', 'dayik', 'bav', 'agir']);
+      
+      // Companion state
+      const [companion, setCompanion] = useState(COMPANIONS[0]);
+      const [bubble, setBubble] = useState({ text: COMPANIONS[0].catchphrase, phonetic: COMPANIONS[0].cry });
+      const [isSpeaking, setIsSpeaking] = useState(false);
+      const [showCompanionPicker, setShowCompanionPicker] = useState(false);
+
+      // Journey & Cartoon Series state
+      const [journeySceneIdx, setJourneySceneIdx] = useState(0);
+      const [journeyHotspot, setJourneyHotspot] = useState(null);
+      const [visitedHotspots, setVisitedHotspots] = useState([]);
+      const [isAlphabetMode, setIsAlphabetMode] = useState(false);
+      const [selectedLetter, setSelectedLetter] = useState(KURDISH_ALPHABET[0]);
+      const [playingEpisode, setPlayingEpisode] = useState(false);
+      const [dialogueIdx, setDialogueIdx] = useState(0);
+      const [episodeQuizAnswer, setEpisodeQuizAnswer] = useState(null);
+      const [episodeQuizPassed, setEpisodeQuizPassed] = useState(false);
+
+      // Wheel state
+      const [spinning, setSpinning] = useState(false);
+      const [rotation, setRotation] = useState(0);
+      const [winBanner, setWinBanner] = useState(null);
+      const [isRaidOpen, setIsRaidOpen] = useState(false);
+      const [selectedChest, setSelectedChest] = useState(null);
+      const rotRef = useRef(0);
+
+      // Quiz state
+      const [quizTarget, setQuizTarget] = useState(null);
+      const [quizOptions, setQuizOptions] = useState([]);
+      const [selectedQuiz, setSelectedQuiz] = useState(null);
+      const [quizScore, setQuizScore] = useState(0);
+
+      // Instant Kurdish Speech Reader with ZERO animal cries
+      const speakGuide = (text, phonetic, animalId = null, wordId = null) => {
+        setBubble({ text, phonetic });
+        setIsSpeaking(true);
+        sound.stopAudio();
+        if (wordId && AUDIO_FILES.words[wordId]) {
+          sound.playWord(wordId, () => setIsSpeaking(false));
+        } else if (animalId && AUDIO_FILES.animals[animalId]) {
+          sound.playAnimal(animalId, () => setIsSpeaking(false));
+        } else {
+          sound.playTone(520, 'sine', 0.12);
+          setTimeout(() => setIsSpeaking(false), 1400);
+        }
+      };
+
+      const handleTouchItem = (itemId) => {
+        const item = TOUCH_DICT[itemId];
+        if (item) {
+          speakGuide(item.desc, item.phonetic, null, item.wordId);
+        }
+      };
+
+      const playEpisodeDialogue = (ep) => {
+        if (playingEpisode) return;
+        setPlayingEpisode(true);
+        setDialogueIdx(0);
+        let idx = 0;
+        const playNext = () => {
+          if (idx >= ep.dialogueLines.length) {
+            setPlayingEpisode(false);
+            speakGuide("Xelek qediya! Aferîn ji bo guhdarîkirina çîrokê!", "A-fe-reen", null, 'aferin');
+            return;
+          }
+          const d = ep.dialogueLines[idx];
+          setDialogueIdx(idx);
+          speakGuide(`${d.speaker}: ${d.text}`, d.phonetic, null, null);
+          idx++;
+          setTimeout(playNext, 3800);
+        };
+        playNext();
+      };
+
+      const handleEpisodeQuiz = (opt, ep) => {
+        if (episodeQuizAnswer !== null) return;
+        setEpisodeQuizAnswer(opt.text);
+        if (opt.correct) {
+          setEpisodeQuizPassed(true);
+          sound.playSuccess();
+          sound.playWord('aferin');
+          setCoins(c => c + ep.quizQuestion.rewardCoins);
+          speakGuide(`Aferîn! Bersiva te rast e! Te +${ep.quizQuestion.rewardCoins} Dirav qezenc kir!`, "A-fe-reen", null, 'aferin');
+          if (window.confetti) window.confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+        } else {
+          setEpisodeQuizPassed(false);
+          sound.playError();
+          speakGuide("Şaş e! Dîsa biceribîne!", "", null, null);
+        }
+      };
+
+      const nextQuiz = () => {
+        setSelectedQuiz(null);
+        const target = ALL_ITEMS[Math.floor(Math.random() * ALL_ITEMS.length)];
+        const pool = ALL_ITEMS.filter(x => x.id !== target.id).sort(() => 0.5 - Math.random()).slice(0, 3);
+        const opts = [target, ...pool].sort(() => 0.5 - Math.random());
+        setQuizTarget(target);
+        setQuizOptions(opts);
+        speakGuide(`Ev kîjan e? Guh bide dengê: ${target.name}!`, target.phonetic, null, AUDIO_FILES.words[target.id] ? target.id : null);
+      };
+
+      useEffect(() => {
+        nextQuiz();
+      }, []);
+
+      const spin = () => {
+        if (spinning || energy <= 0) return;
+        setEnergy(e => e - 1);
+        setSpinning(true);
+        setWinBanner(null);
+        speakGuide("Çerx dizivire! Bêhna xwe fireh bike!", "", null, null);
+
+        const targetIdx = Math.floor(Math.random() * REWARDS.length);
+        const targetReward = REWARDS[targetIdx];
+        const segAngle = 360 / REWARDS.length;
+        const targetSeg = targetIdx * segAngle + segAngle / 2;
+        const extra = 6 * 360;
+        const finalDeg = extra + (360 - targetSeg + 270) % 360;
+
+        const newRot = rotRef.current + (finalDeg - (rotRef.current % 360)) + extra;
+        rotRef.current = newRot;
+        setRotation(newRot);
+
+        let tickCount = 0;
+        const tickTimer = setInterval(() => {
+          sound.playTick();
+          if (++tickCount > 24) clearInterval(tickTimer);
+        }, 130);
+
+        setTimeout(() => {
+          setSpinning(false);
+          let wonCard = null;
+          if (targetReward.type === 'coins') {
+            setCoins(c => c + targetReward.amount);
+            sound.playCoin();
+            speakGuide(`Aferîn! Te ${targetReward.amount} Dirav qezenc kir!`, "Dee-rav", null, 'dirav');
+          } else if (targetReward.type === 'energy') {
+            setEnergy(e => Math.min(50, e + targetReward.amount));
+            sound.playSuccess();
+            speakGuide(`Pîroz be! Te ${targetReward.amount} Hêz qezenc kir!`, "Hayz", null, 'hez');
+          } else if (targetReward.type === 'shield') {
+            setShields(s => Math.min(3, s + targetReward.amount));
+            sound.playSuccess();
+            speakGuide("Mertalê nû! Gundê me parastî ye!", "Mehr-tal", null, null);
+          } else if (targetReward.type === 'raid') {
+            sound.playFanfare();
+            setIsRaidOpen(true);
+            speakGuide("Êrîşa dostane! Sindoqekê veke!", "Seen-doq", null, 'dirav');
+          } else if (targetReward.type === 'card') {
+            const avail = ALL_ITEMS.filter(c => !unlocked.includes(c.id));
+            wonCard = (avail.length ? avail : ALL_ITEMS)[Math.floor(Math.random() * (avail.length || ALL_ITEMS.length))];
+            if (!unlocked.includes(wonCard.id)) setUnlocked(u => [...u, wonCard.id]);
+            sound.playFanfare();
+            speakGuide(`Karta nû: ${wonCard.name}! [${wonCard.phonetic}]`, wonCard.phonetic, null, AUDIO_FILES.words[wonCard.id] ? wonCard.id : null);
+          }
+          if (window.confetti) {
+            window.confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+          }
+          setWinBanner({ reward: targetReward, card: wonCard });
+        }, 3600);
+      };
+
+      const handlePickChest = (idx) => {
+        if (selectedChest !== null) return;
+        setSelectedChest(idx);
+        const rewards = [1500, 2500, 1000];
+        const won = rewards[idx];
+        sound.playFanfare();
+        speakGuide(`Aferîn! Te xezîne dît! +${won} Dirav!`, "Xe-zee-ne", null, 'dirav');
+        if (window.confetti) window.confetti({ particleCount: 80, spread: 80, origin: { y: 0.5 } });
+        setCoins(c => c + won);
+        setTimeout(() => {
+          setIsRaidOpen(false);
+          setSelectedChest(null);
+        }, 2200);
+      };
+
+      const upgradeBuilding = (id) => {
+        const b = bState.find(x => x.id === id);
+        if (!b) return;
+        const cost = b.baseCost * b.level;
+        if (coins < cost) {
+          sound.playError();
+          speakGuide("Diravên te têrê nake! Çerxê bizivirîne!", "Dee-rav", null, 'dirav');
+          return;
+        }
+        setCoins(c => c - cost);
+        setBState(prev => prev.map(x => x.id === id ? { ...x, level: x.level + 1 } : x));
+        sound.playFanfare();
+        speakGuide(`Pîroz be! ${b.name} hat zêdekirin!`, "A-va-hee", null, b.wordId);
+        if (window.confetti) window.confetti({ particleCount: 60, spread: 70, origin: { y: 0.7 } });
+      };
+
+      return h('div', { className: 'min-h-screen flex flex-col' },
+        // Top Header with Instant Hover & Touch Reader
+        h('header', { className: 'sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b-4 border-amber-300 shadow-md p-3' },
+          h('div', { className: 'max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3' },
+            h('div', {
+              className: 'flex items-center gap-2 cursor-pointer',
+              onClick: () => handleTouchItem('sun_icon'),
+              onMouseEnter: () => handleTouchItem('sun_icon')
+            },
+              h('div', { className: 'w-10 h-10 rounded-2xl bg-amber-400 flex items-center justify-center text-2xl shadow animate-pulse-glow' }, '☀️'),
+              h('div', null,
+                h('h1', { className: 'text-2xl font-black text-amber-950 font-bold tracking-tight' }, 'Gundé me'),
+                h('span', { className: 'text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full' }, 'Ast ' + level)
+              )
+            ),
+            h('div', { className: 'flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-2xl border-2 border-amber-200' },
+              h('div', {
+                onClick: () => handleTouchItem('coins_box'),
+                onMouseEnter: () => handleTouchItem('coins_box'),
+                className: 'flex items-center gap-1 bg-white px-2.5 py-1 rounded-xl shadow-sm text-sm font-extrabold text-amber-900 cursor-pointer hover:scale-105 active:scale-95 transition-transform'
+              }, '🪙 ' + coins.toLocaleString()),
+              h('div', {
+                onClick: () => handleTouchItem('energy_bolt'),
+                onMouseEnter: () => handleTouchItem('energy_bolt'),
+                className: 'flex items-center gap-1 bg-white px-2.5 py-1 rounded-xl shadow-sm text-sm font-extrabold text-sky-900 cursor-pointer hover:scale-105 active:scale-95 transition-transform'
+              }, '⚡ ' + energy + '/50'),
+              h('div', {
+                onClick: () => handleTouchItem('shield_icon'),
+                onMouseEnter: () => handleTouchItem('shield_icon'),
+                className: 'flex items-center gap-1 bg-white px-2.5 py-1 rounded-xl shadow-sm text-sm font-extrabold text-emerald-900 cursor-pointer hover:scale-105 active:scale-95 transition-transform'
+              }, '🛡️ ' + shields + '/3')
+            ),
+            h('nav', { className: 'flex items-center gap-1 bg-amber-100 p-1 rounded-2xl flex-wrap' },
+              ['journey:🎬 Karton & Ziman', 'wheel:🎡 Çerx', 'village:🏡 Gund', 'cards:📚 Karta Zimanê', 'quiz:❓ Pirs'].map(item => {
+                const [key, label] = item.split(':');
+                const active = tab === key;
+                return h('button', {
+                  key,
+                  onClick: () => {
+                    setTab(key);
+                    speakGuide(`Em derbasî beşa ${label} bûn!`, "", null, null);
+                  },
+                  className: `px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black transition-all ${
+                    active ? 'bg-amber-500 text-white shadow scale-105' : 'text-amber-900 hover:bg-amber-200'
+                  }`
+                }, label);
+              })
+            )
+          )
+        ),
+
+        // Body Content
+        h('main', { className: 'flex-1 max-w-5xl mx-auto w-full p-4 pb-28' },
+          // Tab: Cartoon Series & Kurdish Alphabet Explorer
+          tab === 'journey' && (() => {
+            const curEp = CARTOON_EPISODES[journeySceneIdx] || CARTOON_EPISODES[0];
+            return h('div', { className: 'flex flex-col gap-6' },
+              // Mode Switcher Banner
+              h('div', { className: 'bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-600 rounded-3xl p-5 text-white shadow-xl flex flex-wrap items-center justify-between gap-4' },
+                h('div', null,
+                  h('span', { className: 'text-xs text-amber-100 font-extrabold tracking-wider uppercase block mb-1' }, '🌟 Sînemaya Kartonî ya Gundê Me & Alfabeya Hawarê'),
+                  h('h2', { className: 'text-2xl sm:text-3xl font-black' }, isAlphabetMode ? '🔤 Alfabeya Hawarê (31 Tîpên Zêrîn)' : '🎬 Rêze-Fîlmên Kartonî yên Gundê Me'),
+                  h('p', { className: 'text-xs sm:text-sm text-amber-100 font-medium mt-1 max-w-xl' },
+                    isAlphabetMode ? 'Li ser her tîpê bisekine an dest bide da ku dengê tîpê û peyva wê ya Kurdî bibihîzî!' : 'Jiyana rojane ya Kurdî di hemû werzan de bi fîlmê kartonî, xebata cotkaran û dengbêjan!'
+                  )
+                ),
+                h('div', { className: 'flex items-center gap-2 bg-black/20 p-1.5 rounded-2xl backdrop-blur-md' },
+                  h('button', {
+                    onClick: () => {
+                      setIsAlphabetMode(false);
+                      speakGuide("Beşa fîlmên kartonî yên gundê me!", "", null, null);
+                    },
+                    className: `px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all ${
+                      !isAlphabetMode ? 'bg-white text-amber-950 shadow-md scale-105' : 'text-white hover:bg-white/10'
+                    }`
+                  }, '🎬 Fîlmên Kartonî'),
+                  h('button', {
+                    onClick: () => {
+                      setIsAlphabetMode(true);
+                      speakGuide("Alfabeya zimanê Kurdî! 31 tîpên Celadet Bedirxan!", "", null, null);
+                    },
+                    className: `px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all ${
+                      isAlphabetMode ? 'bg-white text-amber-950 shadow-md scale-105' : 'text-white hover:bg-white/10'
+                    }`
+                  }, '🔤 Alfabeya Kurdî')
+                )
+              ),
+
+              // Mode 1: 31-Letter Hawar Alphabet Explorer
+              isAlphabetMode ? h('div', { className: 'flex flex-col gap-6' },
+                h('div', { className: 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3' },
+                  KURDISH_ALPHABET.map((item) => {
+                    const isSel = selectedLetter && selectedLetter.letter === item.letter;
+                    return h('div', {
+                      key: item.letter,
+                      onClick: () => {
+                        setSelectedLetter(item);
+                        speakGuide(`Tîpa ${item.letter}: ${item.name}! Peyv: ${item.exampleWord}!`, item.phonetic, null, item.wordId);
+                      },
+                      onMouseEnter: () => {
+                        setSelectedLetter(item);
+                        speakGuide(`Tîpa ${item.letter}: ${item.name}! Peyv: ${item.exampleWord}!`, item.phonetic, null, item.wordId);
+                      },
+                      className: `cursor-pointer p-3 rounded-2xl border-3 flex flex-col items-center justify-center transition-all transform hover:-translate-y-1 hover:shadow-lg active:scale-95 ${
+                        isSel ? 'bg-amber-500 text-white border-amber-200 shadow-xl scale-105' : 'bg-white text-amber-950 border-amber-200 shadow-sm hover:border-amber-400'
+                      }`
+                    },
+                      h('span', { className: 'text-2xl sm:text-3xl font-black font-["Nunito"]' }, item.letter),
+                      h('span', { className: `text-xs font-bold ${isSel ? 'text-amber-100' : 'text-amber-700'}` }, item.name),
+                      h('div', { className: 'flex items-center gap-1 mt-1 text-xs' },
+                        h('span', null, item.icon),
+                        h('span', { className: 'font-bold' }, item.exampleWord)
+                      )
+                    );
+                  })
+                ),
+
+                // Selected Letter Spotlight Card
+                selectedLetter && h('div', { className: 'bg-white rounded-3xl p-6 border-4 border-amber-300 shadow-xl flex flex-wrap items-center justify-between gap-4' },
+                  h('div', { className: 'flex items-center gap-4' },
+                    h('div', { className: 'w-20 h-20 rounded-3xl bg-amber-500 text-white flex items-center justify-center text-5xl font-black shadow-lg font-["Nunito"]' }, selectedLetter.letter),
+                    h('div', null,
+                      h('div', { className: 'flex items-center gap-2' },
+                        h('h3', { className: 'text-2xl font-black text-amber-950' }, `Tîpa ${selectedLetter.letter} — ${selectedLetter.name}`),
+                        h('span', { className: 'bg-amber-100 text-amber-900 text-xs font-mono font-bold px-2.5 py-1 rounded-full' }, `[${selectedLetter.phonetic}]`)
+                      ),
+                      h('p', { className: 'text-base font-extrabold text-stone-800 mt-1' }, `${selectedLetter.icon} Peyv: ${selectedLetter.exampleWord}`),
+                      h('p', { className: 'text-xs text-stone-600 mt-0.5' }, selectedLetter.exampleMeaning)
+                    )
+                  ),
+                  h('button', {
+                    onClick: () => speakGuide(`Tîpa ${selectedLetter.letter}: ${selectedLetter.name}! Peyv: ${selectedLetter.exampleWord}!`, selectedLetter.phonetic, null, selectedLetter.wordId),
+                    className: 'flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-5 py-3 rounded-2xl font-black text-sm shadow-lg hover:scale-105 active:scale-95 transition-transform'
+                  }, '🔊 Dengê Tîpê & Peyvê')
+                )
+              ) :
+              
+              // Mode 2: 6 Cartoon Series Episodes
+              h('div', { className: 'flex flex-col gap-6' },
+                // Episode Selector Tabs
+                h('div', { className: 'flex items-center gap-2 overflow-x-auto pb-2' },
+                  CARTOON_EPISODES.map((ep, eIdx) => {
+                    const isSel = eIdx === journeySceneIdx;
+                    return h('button', {
+                      key: ep.id,
+                      onClick: () => {
+                        setJourneySceneIdx(eIdx);
+                        setJourneyHotspot(null);
+                        setEpisodeQuizAnswer(null);
+                        setEpisodeQuizPassed(false);
+                        speakGuide(`${ep.title} — ${ep.subtitle}`, "", null, null);
+                      },
+                      onMouseEnter: () => {
+                        if (!isSel) speakGuide(ep.title, "", null, null);
+                      },
+                      className: `flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all ${
+                        isSel ? 'bg-amber-500 text-white shadow-lg scale-105 border-2 border-amber-300' : 'bg-white text-stone-700 hover:bg-amber-50 border-2 border-stone-200'
+                      }`
+                    },
+                      h('span', { className: 'text-2xl' }, ep.backdropEmoji),
+                      h('div', { className: 'text-left' },
+                        h('div', { className: 'font-black leading-tight' }, ep.title.split(':')[1] || ep.title),
+                        h('div', { className: 'text-[11px] opacity-80' }, ep.character + (ep.season ? ` • ${ep.season}` : ''))
+                      )
+                    );
+                  })
+                ),
+
+                // Cartoon Stage & Illustrated Scene Canvas
+                h('div', { className: 'bg-white rounded-3xl p-6 border-4 border-amber-300 shadow-xl flex flex-col gap-5 overflow-hidden' },
+                  // Episode Header
+                  h('div', { className: 'flex flex-wrap items-center justify-between gap-3 bg-amber-50 p-4 rounded-2xl border border-amber-200' },
+                    h('div', null,
+                      h('div', { className: 'flex items-center gap-2' },
+                        h('span', { className: 'text-3xl' }, curEp.backdropEmoji),
+                        h('h3', { className: 'text-xl sm:text-2xl font-black text-amber-950' }, curEp.title)
+                      ),
+                      h('p', { className: 'text-xs sm:text-sm text-amber-800 font-bold mt-0.5' }, curEp.subtitle)
+                    ),
+                    h('div', { className: 'flex items-center gap-2' },
+                      h('span', { className: 'bg-amber-200 text-amber-900 text-xs font-black px-3 py-1 rounded-full' }, curEp.character),
+                      curEp.season && h('span', { className: 'bg-emerald-100 text-emerald-900 text-xs font-black px-3 py-1 rounded-full' }, 'Werz: ' + curEp.season)
+                    )
+                  ),
+
+                  // Synopsis Text
+                  h('div', { className: 'bg-stone-50 p-4 rounded-2xl border border-stone-200 text-stone-800 text-sm leading-relaxed font-medium' },
+                    curEp.storyText
+                  ),
+
+                  // Disney/Ghibli Kurdish Village Stage Canvas
+                  h('div', {
+                    className: 'relative min-h-[300px] rounded-3xl p-6 border-4 border-amber-400 overflow-hidden shadow-inner flex flex-col justify-between bg-gradient-to-b from-sky-200 via-amber-100 to-emerald-200'
+                  },
+                    // Visual background decorative elements
+                    h('div', { className: 'absolute top-3 left-4 text-5xl opacity-40 select-none pointer-events-none' }, '⛰️ 🏔️'),
+                    h('div', { className: 'absolute top-2 right-4 text-4xl select-none pointer-events-none' }, curEp.backdropEmoji),
+                    h('div', { className: 'absolute bottom-2 left-6 text-6xl opacity-30 select-none pointer-events-none' }, '🏡'),
+                    h('div', { className: 'absolute bottom-2 right-8 text-5xl opacity-30 select-none pointer-events-none' }, '🌳'),
+
+                    // Dialogue player bar
+                    h('div', { className: 'relative z-10 flex flex-wrap items-center justify-between gap-3 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-amber-300 shadow' },
+                      h('div', { className: 'flex items-center gap-2' },
+                        h('span', { className: 'text-2xl' }, curEp.dialogueLines[dialogueIdx] ? curEp.dialogueLines[dialogueIdx].avatar : '🎬'),
+                        h('div', null,
+                          h('span', { className: 'text-xs font-bold text-amber-800 block' },
+                            playingEpisode ? `Dilîze (${dialogueIdx + 1}/${curEp.dialogueLines.length}): ${curEp.dialogueLines[dialogueIdx].speaker}` : 'Guh Bide Çîroka Zindî:'
+                          ),
+                          h('p', { className: 'text-sm font-black text-amber-950' },
+                            curEp.dialogueLines[dialogueIdx] ? curEp.dialogueLines[dialogueIdx].text : curEp.dialogueLines[0].text
+                          )
+                        )
+                      ),
+                      h('button', {
+                        onClick: () => playEpisodeDialogue(curEp),
+                        disabled: playingEpisode,
+                        className: `px-4 py-2 rounded-xl text-xs sm:text-sm font-black text-white shadow-md transition-all ${
+                          playingEpisode ? 'bg-slate-400' : 'bg-gradient-to-r from-red-500 to-amber-500 hover:scale-105 active:scale-95'
+                        }`
+                      }, playingEpisode ? 'Dilîze... 🔊' : '▶️ Fîlmê Dest Pê Bike')
+                    ),
+
+                    // Interactive Scene Hotspots with Instant Speech & Zero Animal Cries
+                    h('div', { className: 'relative z-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 my-4' },
+                      curEp.hotspots.map(hspot => {
+                        const isSel = journeyHotspot && journeyHotspot.id === hspot.id;
+                        const isVis = visitedHotspots.includes(hspot.id);
+                        return h('div', {
+                          key: hspot.id,
+                          onClick: () => {
+                            setJourneyHotspot(hspot);
+                            if (!visitedHotspots.includes(hspot.id)) {
+                              setVisitedHotspots(v => [...v, hspot.id]);
+                            }
+                            sound.playSFX(hspot.sfx);
+                            speakGuide(`${hspot.name}! ${hspot.narration}`, hspot.phonetic, null, hspot.wordId);
+                          },
+                          onMouseEnter: () => {
+                            sound.playSFX(hspot.sfx);
+                            speakGuide(`${hspot.name}! ${hspot.narration}`, hspot.phonetic, null, hspot.wordId);
+                          },
+                          className: `cursor-pointer p-4 rounded-2xl border-3 transition-all transform hover:-translate-y-1 hover:shadow-xl active:scale-95 ${
+                            isSel ? 'bg-amber-500 text-white border-amber-200 shadow-xl scale-[1.02]' : isVis ? 'bg-white/95 text-stone-800 border-emerald-300 shadow' : 'bg-white/90 text-stone-800 border-amber-200 shadow-sm hover:border-amber-400'
+                          }`
+                        },
+                          h('div', { className: 'flex items-start gap-3' },
+                            h('div', { className: `w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner ${isSel ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-900'}` }, hspot.icon),
+                            h('div', { className: 'flex-1 min-w-0' },
+                              h('div', { className: 'flex items-center justify-between gap-1' },
+                                h('h4', { className: 'text-sm font-black truncate' }, hspot.name),
+                                isVis && h('span', { className: 'text-xs' }, isSel ? '⭐' : '✅')
+                              ),
+                              h('div', { className: `text-xs font-bold mt-0.5 inline-block px-2 py-0.5 rounded-md ${isSel ? 'bg-amber-600 text-amber-100' : 'bg-amber-100 text-amber-900'}` }, hspot.verb),
+                              h('div', { className: `text-[11px] font-mono mt-1 ${isSel ? 'text-amber-100' : 'text-stone-500'}` }, `[${hspot.phonetic}]`)
+                            )
+                          ),
+                          h('div', { className: 'mt-2 pt-2 border-t border-black/5 flex items-center justify-between text-xs' },
+                            h('span', { className: 'text-[11px] truncate opacity-90' }, hspot.description),
+                            h('span', { className: 'text-sm' }, '🔊')
+                          )
+                        );
+                      })
+                    ),
+
+                    // Hotspot active spotlight
+                    journeyHotspot && h('div', { className: 'relative z-10 bg-white/95 backdrop-blur-md rounded-2xl p-4 border-2 border-amber-300 shadow-lg flex flex-wrap items-center justify-between gap-3' },
+                      h('div', { className: 'flex items-center gap-3' },
+                        h('span', { className: 'text-4xl p-2 bg-amber-50 rounded-2xl border border-amber-200' }, journeyHotspot.icon),
+                        h('div', null,
+                          h('div', { className: 'flex items-center gap-2' },
+                            h('h4', { className: 'text-base sm:text-lg font-black text-amber-950' }, journeyHotspot.name),
+                            h('span', { className: 'bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full' }, 'Lêker: ' + journeyHotspot.verb)
+                          ),
+                          h('p', { className: 'text-xs text-stone-600 mt-0.5 font-medium' }, journeyHotspot.narration),
+                          h('p', { className: 'text-xs font-mono text-amber-800 font-bold mt-1' }, `Bilêvkirin: [${journeyHotspot.phonetic}]`)
+                        )
+                      ),
+                      h('button', {
+                        onClick: () => {
+                          sound.playSFX(journeyHotspot.sfx);
+                          speakGuide(journeyHotspot.narration, journeyHotspot.phonetic, null, journeyHotspot.wordId);
+                        },
+                        className: 'flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl font-bold text-xs sm:text-sm shadow active:scale-95 transition-all'
+                      }, '🔊 Dengê Wî Bibihîze')
+                    )
+                  ),
+
+                  // Episode Comprehension Quiz
+                  h('div', { className: 'bg-amber-50 rounded-3xl p-5 border-3 border-amber-300 flex flex-col gap-3' },
+                    h('div', { className: 'flex items-center justify-between' },
+                      h('h4', { className: 'font-black text-amber-950 text-base' }, '❓ Pirs & Xelat ji bo vê Xelekê:'),
+                      h('span', { className: 'bg-amber-200 text-amber-900 text-xs font-extrabold px-3 py-1 rounded-full' }, `+${curEp.quizQuestion.rewardCoins} 🪙`)
+                    ),
+                    h('p', { className: 'text-sm font-bold text-stone-800' }, curEp.quizQuestion.question),
+                    h('div', { className: 'grid grid-cols-1 sm:grid-cols-3 gap-3' },
+                      curEp.quizQuestion.options.map(opt => {
+                        const isChosen = episodeQuizAnswer === opt.text;
+                        let btnStyle = 'bg-white border-amber-200 text-stone-800 hover:bg-amber-100';
+                        if (isChosen) {
+                          btnStyle = opt.correct ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-rose-500 text-white border-rose-600';
+                        }
+                        return h('button', {
+                          key: opt.text,
+                          disabled: episodeQuizAnswer !== null,
+                          onClick: () => handleEpisodeQuiz(opt, curEp),
+                          onMouseEnter: () => speakGuide(opt.text, opt.phonetic, null, null),
+                          className: `p-3 rounded-2xl border-2 flex items-center justify-center gap-2 font-black text-xs sm:text-sm transition-all ${btnStyle}`
+                        },
+                          h('span', { className: 'text-xl' }, opt.icon),
+                          h('span', null, opt.text)
+                        );
+                      })
+                    ),
+                    episodeQuizAnswer !== null && h('div', { className: 'text-center mt-2' },
+                      h('span', { className: `text-xs font-black px-4 py-1.5 rounded-full ${episodeQuizPassed ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}` },
+                        episodeQuizPassed ? `Aferîn! Bersiva te rast e! (+${curEp.quizQuestion.rewardCoins} 🪙)` : 'Şaş e! Dîsa biceribîne!'
+                      )
+                    )
+                  )
+                )
+              )
+            );
+          })(),
+
+          // Tab 1: Wheel
+          tab === 'wheel' && h('div', { className: 'flex flex-col items-center py-4' },
+            h('h2', { className: 'text-3xl font-black text-amber-900 mb-1' }, '🎡 Çerxa Gundê Me'),
+            h('p', { className: 'text-amber-800 text-sm font-bold mb-6' }, 'Bizivirîne û dirav, mertal û kartên zimanê qezenc bike!'),
+            h('div', { className: 'relative w-80 h-80 sm:w-96 sm:h-96 flex items-center justify-center' },
+              h('div', { className: 'absolute -top-3 z-30 w-0 h-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-t-[30px] border-t-red-600 drop-shadow-md' }),
+              h('div', { className: 'absolute inset-0 rounded-full border-8 border-amber-500 bg-amber-400 shadow-2xl p-2 flex items-center justify-center' },
+                h('div', {
+                  className: 'w-full h-full rounded-full overflow-hidden shadow-inner border-4 border-amber-600',
+                  style: {
+                    transform: `rotate(${rotation}deg)`,
+                    transition: spinning ? 'transform 3.6s cubic-bezier(0.15, 0.9, 0.2, 1)' : 'none'
+                  }
+                },
+                  h('svg', { viewBox: '0 0 100 100', className: 'w-full h-full' },
+                    REWARDS.map((r, i) => {
+                      const sa = (i * 360) / REWARDS.length;
+                      const ea = ((i + 1) * 360) / REWARDS.length;
+                      const x1 = 50 + 50 * Math.cos((Math.PI * sa) / 180);
+                      const y1 = 50 + 50 * Math.sin((Math.PI * sa) / 180);
+                      const x2 = 50 + 50 * Math.cos((Math.PI * ea) / 180);
+                      const y2 = 50 + 50 * Math.sin((Math.PI * ea) / 180);
+                      const ma = sa + (360 / REWARDS.length) / 2;
+                      const tx = 50 + 32 * Math.cos((Math.PI * ma) / 180);
+                      const ty = 50 + 32 * Math.sin((Math.PI * ma) / 180);
+                      return h('g', { key: i },
+                        h('path', { d: `M50,50 L${x1},${y1} A50,50 0 0,1 ${x2},${y2} Z`, fill: r.color, stroke: '#92400E', strokeWidth: '0.8' }),
+                        h('text', {
+                          x: tx, y: ty, fill: '#1E293B', fontSize: '4.5', fontWeight: 'bold', textAnchor: 'middle', dominantBaseline: 'central',
+                          transform: `rotate(${ma + 90}, ${tx}, ${ty})`
+                        }, `${r.icon} ${r.label}`)
+                      );
+                    })
+                  )
+                ),
+                h('div', { className: 'absolute w-20 h-20 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-300 border-4 border-white shadow-xl flex items-center justify-center text-3xl' }, '☀️')
+              )
+            ),
+            h('div', { className: 'mt-6 flex flex-col items-center gap-2' },
+              h('button', {
+                onClick: spin,
+                disabled: spinning || energy <= 0,
+                className: `px-10 py-4 rounded-3xl font-black text-2xl text-white shadow-xl transition-all ${
+                  spinning || energy <= 0 ? 'bg-slate-400' : 'bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500 hover:scale-105 active:scale-95'
+                }`
+              }, spinning ? 'DIZIVIRE...' : 'BIZIVIRÎNE! ⚡'),
+              h('span', { className: 'text-amber-900 font-extrabold text-sm' }, `Hêz: ${energy} / 50`)
+            ),
+            winBanner && h('div', { className: 'mt-4 bg-white p-4 rounded-2xl border-4 border-amber-300 shadow-xl text-center max-w-sm w-full' },
+              h('div', { className: 'text-3xl' }, winBanner.reward.icon),
+              h('h3', { className: 'text-lg font-black text-amber-900' }, `Te ${winBanner.reward.label} qezenc kir!`),
+              winBanner.card && h('div', { className: 'mt-2 p-2 bg-sky-50 rounded-xl border border-sky-300 flex items-center justify-center gap-2' },
+                h('span', { className: 'text-3xl' }, winBanner.card.emoji),
+                h('div', { className: 'text-left' },
+                  h('span', { className: 'text-xs text-sky-600 font-bold block' }, 'Karta Nû'),
+                  h('span', { className: 'font-black text-sky-950' }, winBanner.card.name)
+                )
+              )
+            )
+          ),
+
+          // Tab 2: Village
+          tab === 'village' && h('div', { className: 'flex flex-col gap-6' },
+            h('div', { className: 'bg-emerald-600 text-white p-6 rounded-3xl shadow-xl border-4 border-emerald-400 flex flex-wrap items-center justify-between gap-4' },
+              h('div', null,
+                h('h2', { className: 'text-3xl font-black' }, '🏡 Gundê Me — Ast ' + level),
+                h('p', { className: 'text-emerald-100 text-sm font-semibold' }, 'Avahiyên gundê xwe bi diravan mezin bike da ku gund geş bibe!')
+              )
+            ),
+            h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5' },
+              bState.map(b => {
+                const cost = b.baseCost * b.level;
+                const isMax = b.level >= b.maxLevel;
+                const can = coins >= cost;
+                return h('div', {
+                  key: b.id,
+                  onClick: () => speakGuide(`Ev ${b.name} e! ${b.desc}`, b.name, null, b.wordId),
+                  onMouseEnter: () => speakGuide(`Ev ${b.name} e! ${b.desc}`, b.name, null, b.wordId),
+                  className: 'bg-white rounded-3xl p-5 border-4 border-amber-200 shadow-lg flex flex-col justify-between cursor-pointer hover:border-amber-400 transition-all'
+                },
+                  h('div', { className: 'flex items-start justify-between' },
+                    h('div', { className: 'w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-3xl shadow-inner' }, b.icon),
+                    h('span', { className: 'bg-amber-100 text-amber-900 font-black text-xs px-2.5 py-1 rounded-full' }, `Ast ${b.level}/${b.maxLevel}`)
+                  ),
+                  h('div', { className: 'my-3' },
+                    h('h3', { className: 'text-xl font-black text-slate-800' }, b.name),
+                    h('p', { className: 'text-slate-600 text-xs my-1' }, b.desc),
+                    h('span', { className: 'text-xs bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-lg border border-emerald-200 inline-block' }, '✨ ' + b.perks)
+                  ),
+                  h('button', {
+                    onClick: (e) => { e.stopPropagation(); upgradeBuilding(b.id); },
+                    disabled: isMax,
+                    className: `w-full py-2.5 rounded-2xl font-black text-sm text-white shadow ${
+                      isMax ? 'bg-slate-300' : can ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-300 text-slate-600'
+                    }`
+                  }, isMax ? 'Asta Herî Bilind e' : `Zêde Bike: ${cost.toLocaleString()} 🪙`)
+                );
+              })
+            )
+          ),
+
+          // Tab 3: Flashcards with Hover Speech & Clean Kurdish Pronunciation
+          tab === 'cards' && h('div', { className: 'flex flex-col gap-5' },
+            h('div', { className: 'bg-white p-5 rounded-3xl border-3 border-amber-300 shadow flex flex-wrap items-center justify-between gap-3' },
+              h('div', null,
+                h('h2', { className: 'text-2xl font-black text-amber-950' }, '📚 Karta Zimanê Kurdî'),
+                h('p', { className: 'text-xs text-amber-800 font-bold' }, `Ji bo bihîstina dengê Kurdî bisekine an pê lê bike (${unlocked.length}/${ALL_ITEMS.length} vekirî ne)`)
+              )
+            ),
+            h('div', { className: 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4' },
+              ALL_ITEMS.map(item => {
+                const isU = unlocked.includes(item.id);
+                return h('div', {
+                  key: item.id,
+                  onClick: () => {
+                    if (isU) {
+                      speakGuide(`${item.name}! [${item.phonetic}]. ${item.desc}`, item.phonetic, null, AUDIO_FILES.words[item.id] ? item.id : null);
+                    }
+                  },
+                  onMouseEnter: () => {
+                    if (isU) {
+                      speakGuide(`${item.name}! [${item.phonetic}]. ${item.desc}`, item.phonetic, null, AUDIO_FILES.words[item.id] ? item.id : null);
+                    }
+                  },
+                  className: `p-4 rounded-3xl border-4 flex flex-col items-center cursor-pointer transition-transform hover:scale-105 shadow-md ${
+                    isU ? 'bg-white border-amber-300' : 'bg-slate-100 border-slate-300 opacity-60'
+                  }`
+                },
+                  h('div', { className: 'w-full flex justify-between items-center text-xs' },
+                    h('span', { className: 'bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full text-[10px]' }, item.rarity),
+                    h('span', null, isU ? '🔊' : '🔒')
+                  ),
+                  h('div', { className: 'w-20 h-20 my-2 bg-amber-50 rounded-2xl flex items-center justify-center text-5xl shadow-inner' }, isU ? item.emoji : '❓'),
+                  h('h3', { className: 'font-black text-base text-slate-900' }, isU ? item.name : 'Nenas'),
+                  isU && h('span', { className: 'text-xs text-amber-700 font-bold' }, `[${item.phonetic}]`),
+                  isU && h('p', { className: 'text-[11px] text-slate-500 text-center mt-1' }, item.desc),
+                  isU && AUDIO_FILES.animals[item.id] && h('button', {
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      sound.playAnimal(item.id);
+                    },
+                    className: 'mt-2 text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full flex items-center gap-1'
+                  }, '🐾 Dengê Ajalê')
+                );
+              })
+            )
+          ),
+
+          // Tab 4: Quiz
+          tab === 'quiz' && quizTarget && h('div', { className: 'max-w-md mx-auto bg-white p-6 rounded-3xl border-4 border-purple-300 shadow-2xl text-center' },
+            h('div', { className: 'flex justify-between items-center mb-4 text-xs font-black' },
+              h('span', { className: 'bg-purple-100 text-purple-900 px-3 py-1 rounded-full' }, 'Lîstika Pirsan'),
+              h('span', { className: 'bg-amber-100 text-amber-900 px-3 py-1 rounded-full' }, `Pûan: ${quizScore}`)
+            ),
+            h('h3', { className: 'text-xl font-black text-slate-800 mb-2' }, 'Ev kîjan peyv e? Guh bide dengê!'),
+            h('button', {
+              onClick: () => {
+                speakGuide(quizTarget.name, quizTarget.phonetic, null, AUDIO_FILES.words[quizTarget.id] ? quizTarget.id : null);
+              },
+              className: 'w-20 h-20 my-4 mx-auto rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 text-white shadow-xl flex flex-col items-center justify-center hover:scale-110 active:scale-95 transition-transform'
+            },
+              h('span', { className: 'text-3xl' }, '🔊'),
+              h('span', { className: 'text-[10px] font-black uppercase' }, 'Deng')
+            ),
+            h('div', { className: 'grid grid-cols-2 gap-3 mt-4' },
+              quizOptions.map(opt => {
+                const isSelected = selectedQuiz === opt.id;
+                const isTarget = opt.id === quizTarget.id;
+                let bg = 'bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-950';
+                if (selectedQuiz !== null) {
+                  if (isTarget) bg = 'bg-emerald-500 text-white border-emerald-600';
+                  else if (isSelected) bg = 'bg-rose-500 text-white border-rose-600';
+                  else bg = 'bg-slate-100 text-slate-400 opacity-60';
+                }
+                return h('button', {
+                  key: opt.id,
+                  disabled: selectedQuiz !== null,
+                  onClick: () => {
+                    setSelectedQuiz(opt.id);
+                    if (opt.id === quizTarget.id) {
+                      sound.playSuccess();
+                      setQuizScore(s => s + 1);
+                      setCoins(c => c + 150);
+                      setEnergy(e => Math.min(50, e + 1));
+                      if (!unlocked.includes(quizTarget.id)) setUnlocked(u => [...u, quizTarget.id]);
+                      speakGuide("Aferîn! Pir baş! Bersiva te rast e!", "Aferîn", null, 'aferin');
+                      if (window.confetti) window.confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+                    } else {
+                      sound.playError();
+                      speakGuide(`Şaş e! Ev bû: ${quizTarget.name}!`, quizTarget.phonetic, null, AUDIO_FILES.words[quizTarget.id] ? quizTarget.id : null);
+                    }
+                  },
+                  onMouseEnter: () => speakGuide(opt.name, opt.phonetic, null, AUDIO_FILES.words[opt.id] ? opt.id : null),
+                  className: `p-3 rounded-2xl border-3 flex flex-col items-center justify-center gap-1 transition-all ${bg}`
+                },
+                  h('span', { className: 'text-3xl' }, opt.emoji),
+                  h('span', { className: 'font-black text-base' }, opt.name),
+                  h('span', { className: 'text-xs opacity-75' }, `[${opt.phonetic}]`)
+                );
+              })
+            ),
+            selectedQuiz !== null && h('div', { className: 'mt-5 flex flex-col items-center gap-2' },
+              h('span', { className: `font-black text-sm px-4 py-1.5 rounded-full ${selectedQuiz === quizTarget.id ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}` },
+                selectedQuiz === quizTarget.id ? 'Aferîn! Pir baş! (+150 🪙, +1 ⚡)' : `Şaş e! Ev bû: ${quizTarget.name} (${quizTarget.emoji})`
+              ),
+              h('button', {
+                onClick: nextQuiz,
+                className: 'mt-2 px-6 py-2 rounded-2xl bg-purple-600 text-white font-black text-sm shadow hover:bg-purple-700'
+              }, 'Pirsa Din ➔')
+            )
+          )
+        ),
+
+        // Companion Speech Bubble & Floating Avatar
+        h('div', { className: 'fixed bottom-4 right-4 z-40 flex flex-col items-end pointer-events-none max-w-xs' },
+          bubble.text && h('div', {
+            className: 'mb-2 mr-2 bg-white/95 text-slate-900 px-4 py-2.5 rounded-3xl border-4 border-amber-400 shadow-2xl pointer-events-auto relative animate-bounce-soft'
+          },
+            h('p', { className: 'font-black text-sm font-["Nunito"] text-amber-950 leading-tight' }, bubble.text),
+            bubble.phonetic && h('p', { className: 'text-[11px] font-bold text-amber-700 mt-0.5' }, `[${bubble.phonetic}]`),
+            h('div', { className: 'absolute -bottom-3 right-8 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[12px] border-t-amber-400' })
+          ),
+          h('div', { className: 'flex items-center gap-2 pointer-events-auto' },
+            h('button', {
+              onClick: () => setShowCompanionPicker(true),
+              className: 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-2 border-amber-300 p-2 rounded-2xl shadow-md text-xs font-bold flex items-center gap-1 transition-transform hover:scale-105 active:scale-95'
+            }, '🔄 Heval'),
+            h('button', {
+              onClick: () => {
+                speakGuide(companion.catchphrase, companion.cry, companion.id, null);
+              },
+              className: `w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-amber-400 via-orange-400 to-yellow-300 border-4 border-white shadow-2xl flex items-center justify-center text-4xl sm:text-5xl transition-all hover:scale-110 active:scale-95 ${
+                isSpeaking ? 'ring-4 ring-amber-400 scale-105' : ''
+              }`
+            }, companion.emoji)
+          )
+        ),
+
+        // Companion Picker Modal
+        showCompanionPicker && h('div', { className: 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4' },
+          h('div', { className: 'bg-white rounded-3xl p-6 max-w-md w-full border-4 border-amber-400 shadow-2xl relative max-h-[90vh] overflow-y-auto' },
+            h('button', {
+              onClick: () => setShowCompanionPicker(false),
+              className: 'absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-100 w-8 h-8 rounded-full font-bold'
+            }, '✕'),
+            h('div', { className: 'text-center mb-5' },
+              h('span', { className: 'text-4xl' }, '👑'),
+              h('h3', { className: 'text-2xl font-black text-amber-950 mt-1' }, 'Hevalê Rêwîtiya Xwe Hilbijêre'),
+              h('p', { className: 'text-xs text-amber-800 font-bold' }, 'Kîjan ajal dê bi te re bipeyive û rê nîşanî te bide?')
+            ),
+            h('div', { className: 'grid grid-cols-2 gap-3' },
+              COMPANIONS.map(c => h('button', {
+                key: c.id,
+                onClick: () => {
+                  setCompanion(c);
+                  setShowCompanionPicker(false);
+                  speakGuide(c.catchphrase, c.cry, c.id, null);
+                },
+                className: `p-3 rounded-2xl border-3 flex flex-col items-center gap-1 transition-all ${
+                  companion.id === c.id ? 'bg-amber-100 border-amber-500 ring-2 ring-amber-400' : 'bg-slate-50 border-slate-200 hover:bg-amber-50'
+                }`
+              },
+                h('span', { className: 'text-4xl' }, c.emoji),
+                h('span', { className: 'font-black text-sm' }, c.name),
+                h('span', { className: 'text-[11px] font-bold text-amber-700' }, `[${c.cry}]`),
+                h('span', { className: 'text-[10px] text-slate-500' }, c.title)
+              ))
+            )
+          )
+        ),
+
+        // Raid Modal
+        isRaidOpen && h('div', { className: 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4' },
+          h('div', { className: 'bg-gradient-to-b from-purple-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 max-w-md w-full border-4 border-amber-400 shadow-2xl text-center' },
+            h('div', { className: 'text-4xl mb-2' }, '⚔️'),
+            h('h3', { className: 'text-2xl font-black text-amber-300 mb-1' }, 'Êrîşa Dostane li ser Gundê Cîran!'),
+            h('p', { className: 'text-xs text-purple-200 mb-6 font-semibold' }, 'Ji bo dîtina xezîneya zêran li ser sindoqekê pêl bike:'),
+            h('div', { className: 'grid grid-cols-3 gap-3 my-4' },
+              [0, 1, 2].map(idx => {
+                const isO = selectedChest === idx;
+                const rewards = [1500, 2500, 1000];
+                return h('button', {
+                  key: idx,
+                  onClick: () => handlePickChest(idx),
+                  disabled: selectedChest !== null,
+                  className: `p-4 rounded-2xl border-3 flex flex-col items-center justify-center gap-2 transition-all transform active:scale-95 ${
+                    isO ? 'bg-amber-400 border-yellow-200 scale-110 shadow-2xl text-amber-950 font-black' : 'bg-purple-800/80 hover:bg-purple-700 border-purple-400'
+                  }`
+                },
+                  h('span', { className: 'text-4xl' }, isO ? '💎' : '🎁'),
+                  h('span', { className: 'text-xs font-black' }, isO ? `+${rewards[idx]} 🪙` : 'Veke')
+                );
+              })
+            ),
+            selectedChest !== null && h('div', { className: 'mt-4 bg-amber-400/20 text-amber-300 p-2 rounded-xl text-sm font-bold border border-amber-400/40' }, 'Te xezîne dît! 🪙')
+          )
+        ),
+
+        // Footer
+        h('footer', { className: 'bg-amber-900 text-amber-200 py-3 text-center text-xs mt-8' },
+          h('p', { className: 'font-bold' }, 'Gundé me © 2026 — Lîstika Zimanê Kurdî bi Tîpên Latînî ji bo Zarokan'),
+          h('p', { className: 'opacity-75 text-[11px]' }, 'Hemû peyv û tîp bi alfabeya latînî ya Hawarê hatine nivîsandin.')
+        )
+      );
+    }
+
+    ReactDOM.render(h(App), document.getElementById('root'));
+  </script>
+</body>
+</html>

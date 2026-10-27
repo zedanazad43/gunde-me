@@ -1,0 +1,170 @@
+{
+  "animals_ser": {
+    "local": "audio/animals/ser.ogg",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/7/77/Lion_raring-sound1TamilNadu178.ogg"
+  },
+  "animals_hesp": {
+    "local": "audio/animals/hesp.ogg",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/d/db/Wiehern.ogg"
+  },
+  "animals_pisik": {
+    "local": "audio/animals/pisik.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/8/81/Meow_of_a_Siamese_cat_-_freemaster2.wav"
+  },
+  "animals_kucik": {
+    "local": "audio/animals/kucik.ogg",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/5/58/Barking_of_a_dog_2.ogg"
+  },
+  "animals_cucik": {
+    "local": "audio/animals/cucik.mp3",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/4/4a/Bird_chirp_2_%28Gravity_Sound%29.mp3"
+  },
+  "animals_gur": {
+    "local": "audio/animals/gur.ogg",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/8/87/Wolf_howls.ogg"
+  },
+  "animals_dik": {
+    "local": "audio/animals/dik.ogg",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Rooster_crowing.ogg"
+  },
+  "animals_ker": {
+    "local": "audio/animals/ker.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/2/25/157763_felix-blume_a-donkey-is-braying-in-his-enclosure-in-south-of-france.wav"
+  },
+  "words_ser": {
+    "local": "audio/words/ser.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/1/17/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-%C5%9F%C3%AAr.wav"
+  },
+  "words_gur": {
+    "local": "audio/words/gur.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/4/41/LL-Q36163_%28kmr%29-Key_M%C3%AErza-gur.wav"
+  },
+  "words_hesp": {
+    "local": "audio/words/hesp.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/3/38/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-hesp.wav"
+  },
+  "words_pisik": {
+    "local": "audio/words/pisik.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/9/95/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-pis%C3%AEk.wav"
+  },
+  "words_kucik": {
+    "local": "audio/words/kucik.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/e/e7/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-k%C3%BB%C3%A7ik.wav"
+  },
+  "words_cucik": {
+    "local": "audio/words/cucik.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/8/86/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-%C3%A7%C3%BB%C3%A7ik.wav"
+  },
+  "words_dik": {
+    "local": "audio/words/dik.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/3/36/LL-Q36368_%28kur%29-Dildadil-d%C3%AEk.wav"
+  },
+  "words_ker": {
+    "local": "audio/words/ker.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/c/c5/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-ker_%28Navd%C3%AAr_3%29.wav"
+  },
+  "words_berx": {
+    "local": "audio/words/berx.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/4/4e/LL-Q36368_%28kur%29-Dildadil-berx.wav"
+  },
+  "words_pez": {
+    "local": "audio/words/pez.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/f/f6/LL-Q36163_%28kmr%29-Key_M%C3%AErza-paz.wav"
+  },
+  "words_celek": {
+    "local": "audio/words/celek.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/d/dd/LL-Q36368_%28kur%29-Dildadil-%C3%A7%C3%AAlek.wav"
+  },
+  "words_rovi": {
+    "local": "audio/words/rovi.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/2/24/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-rov%C3%AE.wav"
+  },
+  "words_teyr": {
+    "local": "audio/words/teyr.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/e/e9/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-teyr.wav"
+  },
+  "words_masi": {
+    "local": "audio/words/masi.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/1/1c/LL-Q36163_%28kmr%29-Key_M%C3%AErza-mas%C3%AE.wav"
+  },
+  "words_bizin": {
+    "local": "audio/words/bizin.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/3/36/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-bizin.wav"
+  },
+  "words_kew": {
+    "local": "audio/words/kew.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/d/d8/LL-Q36163_%28kmr%29-Key_M%C3%AErza-kew.wav"
+  },
+  "words_mirisk": {
+    "local": "audio/words/mirisk.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/f/ff/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-mir%C3%AE%C5%9Fk.wav"
+  },
+  "words_piling": {
+    "local": "audio/words/piling.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/0/0f/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-piling.wav"
+  },
+  "words_fil": {
+    "local": "audio/words/fil.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/d/d0/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-f%C3%AEl.wav"
+  },
+  "words_kevok": {
+    "local": "audio/words/kevok.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/0/09/LL-Q36163_%28kmr%29-Key_M%C3%AErza-kevok.wav"
+  },
+  "words_bivir": {
+    "local": "audio/words/bivir.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/4/47/LL-Q36163_%28kmr%29-Key_M%C3%AErza-bivir.wav"
+  },
+  "words_das": {
+    "local": "audio/words/das.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/4/49/LL-Q36163_%28kmr%29-Key_M%C3%AErza-das.wav"
+  },
+  "words_cakuc": {
+    "local": "audio/words/cakuc.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/f/fd/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-%C3%A7ak%C3%BB%C3%A7.wav"
+  },
+  "words_sur": {
+    "local": "audio/words/sur.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/8/8c/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-%C5%9F%C3%BBr.wav"
+  },
+  "words_xani": {
+    "local": "audio/words/xani.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/2/22/LL-Q36163_%28kmr%29-Key_M%C3%AErza-xan%C3%AE.wav"
+  },
+  "words_dibistan": {
+    "local": "audio/words/dibistan.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/f/f8/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-dibistan.wav"
+  },
+  "words_baxce": {
+    "local": "audio/words/baxce.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/c/c7/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-bax%C3%A7e.wav"
+  },
+  "words_pir": {
+    "local": "audio/words/pir.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/c/c3/LL-Q36163_%28kmr%29-Key_M%C3%AErza-pir.wav"
+  },
+  "words_kani": {
+    "local": "audio/words/kani.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/9/95/LL-Q36163_%28kmr%29-Keyomerd-kan%C3%AE.wav"
+  },
+  "words_bazar": {
+    "local": "audio/words/bazar.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/e/e2/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-bazar_kirin.wav"
+  },
+  "words_dirav": {
+    "local": "audio/words/dirav.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/9/91/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-dirav.wav"
+  },
+  "words_hez": {
+    "local": "audio/words/hez.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/1/15/LL-Q36163_%28kmr%29-Key_M%C3%AErza-h%C3%AAz.wav"
+  },
+  "words_roj": {
+    "local": "audio/words/roj.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/f/f7/LL-Q36163_%28kmr%29-Ebulf%C3%AEda-roj.wav"
+  },
+  "words_aferin": {
+    "local": "audio/words/aferin.wav",
+    "remote": "https://upload.wikimedia.org/wikipedia/commons/8/84/LL-Q36163_%28kmr%29-Key_M%C3%AErza-%27afer%C3%AEn.wav"
+  }
+}

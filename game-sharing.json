@@ -1,0 +1,28 @@
+{
+  "title": "Gundé me",
+  "subtitle": "Lîstika Perwerdehiya Zimanê Kurdî bi Tîpên Latînî ji bo Zarokan",
+  "version": "1.0.0",
+  "language": "ku-Latin",
+  "alphabet": "Hawar",
+  "script": "Latin",
+  "direction": "ltr",
+  "categories": [
+    "Ajalan",
+    "Amûr",
+    "Avahiyên Gund"
+  ],
+  "governance": {
+    "zeroArabicScript": true,
+    "automatedTests": true,
+    "voiceSynthesis": true
+  },
+  "tags": [
+    "Kurdish",
+    "Children",
+    "Education",
+    "CoinMaster",
+    "Latin",
+    "Kurmancî",
+    "Soranî"
+  ]
+}
